@@ -6,11 +6,8 @@ metadata:
 spec:
   replicas: 1
   selector:
-    matchExpressions:
-    - key: app
-      operator: =
-      values:
-      - hello
+    matchLabels:
+      app: hello
   strategy: {}
   template:
     metadata:

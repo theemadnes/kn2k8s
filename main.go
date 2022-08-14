@@ -88,19 +88,21 @@ func main() {
 	// selector & labeling setup for deployment
 	app_label_requirement, _ := labels.NewRequirement("app", selection.Equals, []string{s_name})
 	//app_label_requirement_v1 := v1.LabelSelectorRequirement("app", selection.Equals, s_name) //{}
-	app_label_requirement_v1 := v1.LabelSelectorRequirement{}
-	app_label_requirement_v1.Key = "app"
-	app_label_requirement_v1.Operator = v1.LabelSelectorOperator(selection.Equals)
-	app_label_requirement_v1.Values = []string{s_name}
+	//app_label_requirement_v1 := v1.LabelSelectorRequirement{}
+	//app_label_requirement_v1.Key = "app"
+	//app_label_requirement_v1.Operator = v1.LabelSelectorOperator(selection.Equals)
+	//app_label_requirement_v1.Values = []string{s_name}
 	//app_label_requirement_v1.
 	app_label_selector := labels.NewSelector()
 	app_label_selector_v1 := v1.LabelSelector{}
-	app_label_selector_v1.MatchExpressions = append(app_label_selector_v1.MatchExpressions, app_label_requirement_v1)
+	label_map := make(map[string]string)
+	app_label_selector_v1.MatchLabels = label_map
+	//app_label_selector_v1.MatchExpressions = append(app_label_selector_v1.MatchExpressions, app_label_requirement_v1)
 
 	app_label_selector = app_label_selector.Add(*app_label_requirement)
 
 	// set selector
-	label_map := make(map[string]string)
+	//label_map := make(map[string]string)
 	//println(reflect.TypeOf(&dep_1.Spec.Selector))
 	//label_selector, err := lz.NewRequirement("app", selection.Equals, []string{s_name})
 
