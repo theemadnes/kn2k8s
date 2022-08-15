@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  name: hello
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        sourceKnativeRevision: hello-00004-voj
+        sourceKnativeService: hello
+        sourceKnativeServiceAccount: 841101411908-compute@developer.gserviceaccount.com
+      creationTimestamp: null
+      labels:
+        app: hello
+    spec:
+      containers:
+      - env:
+        - name: test_env_1
+          value: hello_world
+        image: us-docker.pkg.dev/google-samples/containers/gke/whereami@sha256:9957f5ff3096a83bae4e0952faaebcac740557e7fb2a642ed38bf5cb64c45795
+        name: hello
+        ports:
+        - containerPort: 8080
+          name: http1
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+status: {}
+

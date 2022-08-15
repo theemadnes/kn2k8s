@@ -34,7 +34,7 @@ func main() {
 	var dep_replicas int32 = 1 // default number of replicas for the generated deployment
 
 	// spec := &knative.spec{}
-	stream, err := ioutil.ReadFile("samples/hello_revision_2.yaml")
+	stream, err := ioutil.ReadFile("samples/hello_revision_4.yaml")
 	if err != nil {
 		fmt.Println("Cannot open the file", err)
 	}
@@ -120,8 +120,16 @@ func main() {
 	dep_1.Spec.Template.ObjectMeta.Labels = label_map
 	dep_1.Spec.Template.ObjectMeta.Labels["app"] = s_name
 	//fmt.Println(dep_1.Spec.Template.Spec.Containers)
+
+	// create some annotations for the deployment's template metadata that indicate the source kn revision
+	annotation_map := make(map[string]string)
+	annotation_map["sourceKnativeService"] = s_name
+	annotation_map["sourceKnativeRevision"] = rev.ObjectMeta.Name
+	annotation_map["sourceKnativeServiceAccount"] = rev.Spec.ServiceAccountName
+	dep_1.Spec.Template.Annotations = annotation_map
+
+	// copy the podspec container spec to the deployment container spec
 	dep_1.Spec.Template.Spec.Containers = pod_1.Spec.Containers
-	//dep_1.Spec.Template.Spec.Containers[0] = pod_1.Spec.Containers[0]
 
 	dep_1_yaml, err := Yml.Marshal(dep_1)
 
