@@ -8,17 +8,10 @@ import (
 
 	k8Yaml "k8s.io/apimachinery/pkg/util/yaml"
 
-	//v1 "knative.dev/pkg/apis/duck/v1"
-	knative "knative.dev/serving/pkg/apis/serving/v1"
-	//k8Api "k8s.io/kubernetes/pkg/api/v1"
-	//k8Api "k8s.io/api"
-	//api "k8s.io/kubernetes/pkg/api"
-	//resource "k8s.io/kubernetes/pkg/api/resource"
-	//metav1 "k8s.io/api/meta/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	knative "knative.dev/serving/pkg/apis/serving/v1"
 
-	//lz "k8s.io/apimachinery/pkg/labels"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -41,9 +34,8 @@ func generateDeploymentSpec(stream []uint8) string {
 	// copy podspec from YAML import to new pod
 	pod_1.Spec = rev.DeepCopy().Spec.PodSpec
 
-	// get service name from revision
+	// get and set service name from revision to pod
 	s_name := rev.Labels["serving.knative.dev/service"]
-
 	pod_1.Name = s_name
 	pod_1.Spec.Containers[0].Name = s_name
 
@@ -51,7 +43,7 @@ func generateDeploymentSpec(stream []uint8) string {
 	dep_1.APIVersion = "apps/v1"
 	dep_1.Kind = "Deployment"
 
-	// set name and replica count
+	// set deployment name and replica count
 	dep_1.Name = s_name
 	dep_1.Spec.Replicas = &dep_replicas
 
