@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"reflect"
 
 	k8Yaml "k8s.io/apimachinery/pkg/util/yaml"
 
@@ -24,20 +25,13 @@ import (
 	Yml "sigs.k8s.io/yaml"
 )
 
-func main() {
+func generateDeploymentSpec(stream []uint8) string {
 
 	rev := &knative.Revision{}
 	pod_1 := &corev1.Pod{}
 	dep_1 := &appsv1.Deployment{}
-	//labels := &k8sMachinery.metav1.Labels{}
-	//lbls := &metav1.LabelSelectorRequirement{}
 	var dep_replicas int32 = 1 // default number of replicas for the generated deployment
 
-	// spec := &knative.spec{}
-	stream, err := ioutil.ReadFile("samples/hello_revision_4.yaml")
-	if err != nil {
-		fmt.Println("Cannot open the file", err)
-	}
 	dec := k8Yaml.NewYAMLOrJSONDecoder(bytes.NewReader([]byte(stream)), 1000)
 
 	if err := dec.Decode(&rev); err != nil {
@@ -135,9 +129,22 @@ func main() {
 
 	if err != nil {
 		fmt.Printf("err: %v\n", err)
-		return
+		return err.Error()
 	}
-	fmt.Println(string(dep_1_yaml))
+
+	return string(dep_1_yaml)
+}
+
+func main() {
+
+	// spec := &knative.spec{}
+	stream, err := ioutil.ReadFile("samples/hello_revision_4.yaml")
+	fmt.Println(reflect.TypeOf(stream))
+	if err != nil {
+		fmt.Println("Cannot open the file", err)
+	}
+
+	fmt.Println(generateDeploymentSpec(stream))
 
 	//fmt.Println(dep_1)
 }
