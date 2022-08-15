@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"reflect"
 
 	k8Yaml "k8s.io/apimachinery/pkg/util/yaml"
 
@@ -13,8 +12,6 @@ import (
 	knative "knative.dev/serving/pkg/apis/serving/v1"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	Yml "sigs.k8s.io/yaml"
 )
 
@@ -48,13 +45,9 @@ func generateDeploymentSpec(stream []uint8) string {
 	dep_1.Spec.Replicas = &dep_replicas
 
 	// selector & labeling setup for deployment
-	app_label_requirement, _ := labels.NewRequirement("app", selection.Equals, []string{s_name})
-	app_label_selector := labels.NewSelector()
 	app_label_selector_v1 := v1.LabelSelector{}
 	label_map := make(map[string]string)
 	app_label_selector_v1.MatchLabels = label_map
-
-	app_label_selector = app_label_selector.Add(*app_label_requirement)
 
 	dep_1.Spec.Selector = &app_label_selector_v1
 
@@ -84,7 +77,7 @@ func generateDeploymentSpec(stream []uint8) string {
 func main() {
 
 	stream, err := ioutil.ReadFile("samples/hello_revision_4.yaml")
-	fmt.Println(reflect.TypeOf(stream))
+	//fmt.Println(reflect.TypeOf(stream))
 	if err != nil {
 		fmt.Println("Cannot open the file", err)
 	}
