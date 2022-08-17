@@ -78,16 +78,17 @@ func generateDeploymentSpec(stream []uint8) string {
 
 func main() {
 
-	info, err := os.Stdin.Stat()
+	/*info, err := os.Stdin.Stat()
 	if err != nil {
 		panic(err)
-	}
+	}*/
 
-	if info.Mode()&os.ModeCharDevice != 0 || info.Size() <= 0 {
-		fmt.Println("The command is intended to work with pipes.")
-		fmt.Println("Usage: cat source_revision.yaml | kn2k8s")
-		return
-	}
+	/*
+		if info.Mode()&os.ModeCharDevice != 0 || info.Size() <= 0 {
+			fmt.Println("The command is intended to work with pipes.")
+			fmt.Println("Usage: cat source_revision.yaml | kn2k8s")
+			return
+		}*/
 
 	reader := bufio.NewReader(os.Stdin)
 	var output []uint8
