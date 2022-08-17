@@ -101,6 +101,9 @@ func generateServiceSpec(stream []uint8, serviceType string, servicePort int) st
 	service_port.Port = int32(servicePort)
 	service_port.TargetPort.IntVal = rev.Spec.Containers[0].Ports[0].ContainerPort
 	service_1.Spec.Ports = append(service_1.Spec.Ports, *service_port)
+	label_map := make(map[string]string)
+	label_map["app"] = rev.Labels["serving.knative.dev/service"]
+	service_1.Spec.Selector = label_map
 
 	// set Service name
 	service_1.Name = rev.Labels["serving.knative.dev/service"]
