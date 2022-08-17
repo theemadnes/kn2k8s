@@ -124,3 +124,66 @@ go get k8s.io/api/apps/v1
 go get sigs.k8s.io/yaml
 go get k8s.io/apimachinery
 go get k8s.io/apimachinery/pkg/labels
+
+
+$ gcloud run revisions describe hello-00002-muc --region=us-central1  --project am-arg-01 --format yaml
+apiVersion: serving.knative.dev/v1
+kind: Revision
+metadata:
+  annotations:
+    autoscaling.knative.dev/maxScale: '100'
+    run.googleapis.com/client-name: cloud-console
+    run.googleapis.com/cpu-throttling: 'true'
+    serving.knative.dev/creator: admin@alexmattson.altostrat.com
+  creationTimestamp: '2022-07-29T04:38:51.599559Z'
+  generation: 1
+  labels:
+    cloud.googleapis.com/location: us-central1
+    serving.knative.dev/configuration: hello
+    serving.knative.dev/configurationGeneration: '2'
+    serving.knative.dev/route: hello
+    serving.knative.dev/service: hello
+    serving.knative.dev/serviceUid: 4c2ce787-6f11-4a7c-b101-04e486d26c4a
+  name: hello-00002-muc
+  namespace: '841101411908'
+  ownerReferences:
+  - apiVersion: serving.knative.dev/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: Configuration
+    name: hello
+    uid: 74f95133-bc6a-462f-87af-802d6baee0f3
+  resourceVersion: AAXk6mLTQk4
+  selfLink: /apis/serving.knative.dev/v1/namespaces/841101411908/revisions/hello-00002-muc
+  uid: 8072d5f3-cdf4-4f22-840b-690f7559cd64
+spec:
+  containerConcurrency: 80
+  containers:
+  - image: us-docker.pkg.dev/google-samples/containers/gke/whereami@sha256:9957f5ff3096a83bae4e0952faaebcac740557e7fb2a642ed38bf5cb64c45795
+    ports:
+    - containerPort: 8080
+      name: http1
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 512Mi
+  serviceAccountName: 841101411908-compute@developer.gserviceaccount.com
+  timeoutSeconds: 300
+status:
+  conditions:
+  - lastTransitionTime: '2022-07-29T04:39:03.722467Z'
+    status: 'True'
+    type: Ready
+  - lastTransitionTime: '2022-07-29T04:40:18.676850Z'
+    severity: Info
+    status: 'True'
+    type: Active
+  - lastTransitionTime: '2022-07-29T04:39:03.722467Z'
+    status: 'True'
+    type: ContainerHealthy
+  - lastTransitionTime: '2022-07-29T04:39:00.654502Z'
+    status: 'True'
+    type: ResourcesAvailable
+  imageDigest: us-docker.pkg.dev/google-samples/containers/gke/whereami@sha256:9957f5ff3096a83bae4e0952faaebcac740557e7fb2a642ed38bf5cb64c45795
+  logUrl: https://console.cloud.google.com/logs/viewer?project=am-arg-01&resource=cloud_run_revision/service_name/hello/revision_name/hello-00002-muc&advancedFilter=resource.type%3D%22cloud_run_revision%22%0Aresource.labels.service_name%3D%22hello%22%0Aresource.labels.revision_name%3D%22hello-00002-muc%22
+  observedGeneration: 1

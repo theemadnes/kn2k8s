@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
+	"os"
 
 	k8Yaml "k8s.io/apimachinery/pkg/util/yaml"
 
@@ -76,12 +78,28 @@ func generateDeploymentSpec(stream []uint8) string {
 
 func main() {
 
-	stream, err := ioutil.ReadFile("samples/hello_revision_4.yaml")
-	//fmt.Println(reflect.TypeOf(stream))
+	info, err := os.Stdin.Stat()
 	if err != nil {
-		fmt.Println("Cannot open the file", err)
+		panic(err)
 	}
 
-	fmt.Println(generateDeploymentSpec(stream))
+	if info.Mode()&os.ModeCharDevice != 0 || info.Size() <= 0 {
+		fmt.Println("The command is intended to work with pipes.")
+		fmt.Println("Usage: cat source_revision.yaml | kn2k8s")
+		return
+	}
+
+	reader := bufio.NewReader(os.Stdin)
+	var output []uint8
+
+	for {
+		input, err := reader.ReadByte()
+		if err != nil && err == io.EOF {
+			break
+		}
+		output = append(output, input)
+	}
+
+	fmt.Println(generateDeploymentSpec(output))
 
 }
