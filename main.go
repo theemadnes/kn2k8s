@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -76,20 +77,53 @@ func generateDeploymentSpec(stream []uint8) string {
 	return string(dep_1_yaml)
 }
 
+func generateServiceSpec(stream []uint8, serviceType string, servicePort int) string {
+
+	service_1 := &corev1.Service{}
+	rev := &knative.Revision{}
+	service_port := &corev1.ServicePort{}
+
+	dec := k8Yaml.NewYAMLOrJSONDecoder(bytes.NewReader([]byte(stream)), 1000)
+
+	if err := dec.Decode(&rev); err != nil {
+		fmt.Printf("error decoding the yaml: %v", err)
+	}
+
+	/*fmt.Println(serviceType)
+	fmt.Println(servicePort)*/
+
+	// set Kind & API
+	service_1.Kind = "Service"
+	service_1.APIVersion = "v1"
+	service_1.Spec.Type = corev1.ServiceType(serviceType)
+	service_port.Name = rev.Spec.Containers[0].Ports[0].Name
+	service_port.Protocol = rev.Spec.Containers[0].Ports[0].Protocol
+	service_port.Port = int32(servicePort)
+	service_port.TargetPort.IntVal = rev.Spec.Containers[0].Ports[0].ContainerPort
+	service_1.Spec.Ports = append(service_1.Spec.Ports, *service_port)
+
+	// set Service name
+	service_1.Name = rev.Labels["serving.knative.dev/service"]
+
+	service_1_yaml, err := Yml.Marshal(service_1)
+
+	if err != nil {
+		fmt.Printf("err: %v\n", err)
+		return err.Error()
+	}
+
+	return string(service_1_yaml)
+}
+
 func main() {
 
-	/*info, err := os.Stdin.Stat()
-	if err != nil {
-		panic(err)
-	}*/
+	// pull optional command line params (used to configure service port & service type)
+	serviceTypePtr := flag.String("serviceType", "ClusterIP", "string to indicate type of service to create")
+	servicePortPtr := flag.Int("servicePort", 80, "unsigned int to set external port used by service")
 
-	/*
-		if info.Mode()&os.ModeCharDevice != 0 || info.Size() <= 0 {
-			fmt.Println("The command is intended to work with pipes.")
-			fmt.Println("Usage: cat source_revision.yaml | kn2k8s")
-			return
-		}*/
+	flag.Parse()
 
+	// set up piping stdin to utility
 	reader := bufio.NewReader(os.Stdin)
 	var output []uint8
 
@@ -101,6 +135,13 @@ func main() {
 		output = append(output, input)
 	}
 
+	// generate deployment YAML
 	fmt.Println(generateDeploymentSpec(output))
+
+	// add multi-resource delimeter
+	fmt.Println("---")
+
+	// generate service YAML
+	fmt.Println(generateServiceSpec(output, *serviceTypePtr, *servicePortPtr))
 
 }

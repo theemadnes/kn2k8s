@@ -14,5 +14,6 @@ Apply a locally stored knative revision spec:
 
 ```gcloud run revisions describe hello-00002-muc --region=us-central1  --project am-arg-01 --format yaml | go run . | kubectl apply -f -```
 
+Optionally can override defaults (service type of `ClusterIP` on port `80`) via CLI flags:
 
-
+```cat samples/hello_revision_4.yaml | go run . -serviceType=LoadBalancer -servicePort=8080 | kubectl apply -f -```
