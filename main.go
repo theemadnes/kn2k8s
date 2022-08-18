@@ -89,9 +89,6 @@ func generateServiceSpec(stream []uint8, serviceType string, servicePort int) st
 		fmt.Printf("error decoding the yaml: %v", err)
 	}
 
-	/*fmt.Println(serviceType)
-	fmt.Println(servicePort)*/
-
 	// set Kind & API
 	service_1.Kind = "Service"
 	service_1.APIVersion = "v1"
@@ -139,7 +136,7 @@ func main() {
 	}
 
 	// generate deployment YAML
-	fmt.Println(generateDeploymentSpec(output))
+	fmt.Print(generateDeploymentSpec(output))
 
 	// add multi-resource delimeter
 	fmt.Println("---")
