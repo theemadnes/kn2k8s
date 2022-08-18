@@ -142,6 +142,6 @@ func main() {
 	fmt.Println("---")
 
 	// generate service YAML
-	fmt.Println(generateServiceSpec(output, *serviceTypePtr, *servicePortPtr))
+	fmt.Print(generateServiceSpec(output, *serviceTypePtr, *servicePortPtr))
 
 }
