@@ -11,6 +11,7 @@ import (
 	k8Yaml "k8s.io/apimachinery/pkg/util/yaml"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscaling "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	knative "knative.dev/serving/pkg/apis/serving/v1"
 
@@ -115,11 +116,64 @@ func generateServiceSpec(stream []uint8, serviceType string, servicePort int) st
 	return string(service_1_yaml)
 }
 
+func generateHorizontalPodAutoscalerSpec(stream []uint8, maxReplicas int) string {
+
+	// create HPA resource
+	hpa_1 := &autoscaling.HorizontalPodAutoscaler{}
+	rev := &knative.Revision{}
+
+	dec := k8Yaml.NewYAMLOrJSONDecoder(bytes.NewReader([]byte(stream)), 1000)
+
+	if err := dec.Decode(&rev); err != nil {
+		fmt.Printf("error decoding the yaml: %v", err)
+	}
+
+	// set prelim vars
+	var minReplicas int32 = 1
+	var avgUtilization int32 = 50
+	var currentReplicas int32 = 1
+	//var maxReplicas int32 = minReplicas
+
+	// define fields
+	hpa_1.APIVersion = "autoscaling/v2beta2"
+	hpa_1.Kind = "HorizontalPodAutoscaler"
+	hpa_1.ObjectMeta.Name = rev.Labels["serving.knative.dev/service"]
+	hpa_1.Spec.ScaleTargetRef.APIVersion = "apps/v1"
+	hpa_1.Spec.ScaleTargetRef.Kind = "Deployment"
+	hpa_1.Spec.ScaleTargetRef.Name = rev.Labels["serving.knative.dev/service"]
+	hpa_1.Spec.MinReplicas = &minReplicas
+	hpa_1.Spec.MaxReplicas = int32(maxReplicas)
+	hpa_1.Status = autoscaling.HorizontalPodAutoscalerStatus{}
+	hpa_1.Status.CurrentReplicas = currentReplicas
+	hpa_1.Status.Conditions = append(hpa_1.Status.Conditions, autoscaling.HorizontalPodAutoscalerCondition{})
+
+	// create CPU-based metric spec
+	metricsSpec := &autoscaling.MetricSpec{}
+	metricsResource := &autoscaling.ResourceMetricSource{}
+	metricsResource.Name = "cpu"
+	metricsResource.Target.Type = "Utilization"
+	metricsResource.Target.AverageUtilization = &avgUtilization
+	metricsSpec.Type = "Resource"
+	metricsSpec.Resource = metricsResource
+
+	hpa_1.Spec.Metrics = append(hpa_1.Spec.Metrics, *metricsSpec)
+
+	hpa_1_yaml, err := Yml.Marshal(hpa_1)
+
+	if err != nil {
+		fmt.Printf("err: %v\n", err)
+		return err.Error()
+	}
+
+	return string(hpa_1_yaml)
+}
+
 func main() {
 
 	// pull optional command line params (used to configure service port & service type)
 	serviceTypePtr := flag.String("serviceType", "ClusterIP", "string to indicate type of service to create")
-	servicePortPtr := flag.Int("servicePort", 80, "unsigned int to set external port used by service")
+	servicePortPtr := flag.Int("servicePort", 80, "int to set external port used by service")
+	maxReplicasPtr := flag.Int("maxReplicas", 1, "int to set maximum replicas via HPA")
 
 	flag.Parse()
 
@@ -143,5 +197,11 @@ func main() {
 
 	// generate service YAML
 	fmt.Print(generateServiceSpec(output, *serviceTypePtr, *servicePortPtr))
+
+	// add multi-resource delimeter
+	fmt.Println("---")
+
+	// generate HPA YAML
+	fmt.Print(generateHorizontalPodAutoscalerSpec(output, *maxReplicasPtr))
 
 }
