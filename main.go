@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 
 	k8Yaml "k8s.io/apimachinery/pkg/util/yaml"
 
@@ -132,7 +133,11 @@ func generateHorizontalPodAutoscalerSpec(stream []uint8, maxReplicas int) string
 	var minReplicas int32 = 1
 	var avgUtilization int32 = 50
 	var currentReplicas int32 = 1
-	//var maxReplicas int32 = minReplicas
+
+	// figure out if maxReplicas has be provided via CLI
+	if maxReplicas == 0 {
+		maxReplicas, _ = strconv.Atoi(rev.Annotations["autoscaling.knative.dev/maxScale"])
+	}
 
 	// define fields
 	hpa_1.APIVersion = "autoscaling/v2beta2"
@@ -173,7 +178,7 @@ func main() {
 	// pull optional command line params (used to configure service port & service type)
 	serviceTypePtr := flag.String("serviceType", "ClusterIP", "string to indicate type of service to create")
 	servicePortPtr := flag.Int("servicePort", 80, "int to set external port used by service")
-	maxReplicasPtr := flag.Int("maxReplicas", 1, "int to set maximum replicas via HPA")
+	maxReplicasPtr := flag.Int("maxReplicas", 0, "int to set maximum replicas via HPA") // default to zero to detect input
 
 	flag.Parse()
 
