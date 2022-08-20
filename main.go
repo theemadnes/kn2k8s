@@ -152,7 +152,7 @@ func generateHorizontalPodAutoscalerSpec(stream []uint8, maxReplicas int) string
 	var avgUtilization int32 = 50
 	var currentReplicas int32 = 1
 
-	// figure out if maxReplicas has be provided via CLI
+	// figure out if maxReplicas has been provided via CLI
 	if maxReplicas == 0 {
 		maxReplicas, _ = strconv.Atoi(rev.Annotations["autoscaling.knative.dev/maxScale"])
 	}
