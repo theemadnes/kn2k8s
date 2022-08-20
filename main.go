@@ -20,6 +20,20 @@ import (
 	Yml "sigs.k8s.io/yaml"
 )
 
+// super hacky way of removing empty fields
+// the benefit of doing this is that resources don't always show as `configured` even when there are no changes
+func hackToRemoveEmptyFields(ymlBytes []byte) []byte {
+	lines := bytes.Replace(ymlBytes, []byte("      creationTimestamp: null\n"), []byte(""), 1)
+	lines = bytes.Replace(lines, []byte("  creationTimestamp: null\n"), []byte(""), -1)
+	lines = bytes.Replace(lines, []byte("status: {}\n"), []byte(""), 1)
+	lines = bytes.Replace(lines, []byte("status:\n"), []byte(""), 1)
+	lines = bytes.Replace(lines, []byte("  strategy: {}\n"), []byte(""), 1)
+	lines = bytes.Replace(lines, []byte("  loadBalancer: {}\n"), []byte(""), 1)
+	lines = bytes.Replace(lines, []byte("currentMetrics: null\n"), []byte(""), 1)
+	lines = bytes.Replace(lines, []byte("    desiredReplicas: 0\n"), []byte(""), 1)
+	return lines
+}
+
 func generateDeploymentSpec(stream []uint8) string {
 
 	rev := &knative.Revision{}
@@ -76,6 +90,8 @@ func generateDeploymentSpec(stream []uint8) string {
 		return err.Error()
 	}
 
+	dep_1_yaml = hackToRemoveEmptyFields(dep_1_yaml)
+
 	return string(dep_1_yaml)
 }
 
@@ -113,6 +129,8 @@ func generateServiceSpec(stream []uint8, serviceType string, servicePort int) st
 		fmt.Printf("err: %v\n", err)
 		return err.Error()
 	}
+
+	service_1_yaml = hackToRemoveEmptyFields(service_1_yaml)
 
 	return string(service_1_yaml)
 }
@@ -162,6 +180,7 @@ func generateHorizontalPodAutoscalerSpec(stream []uint8, maxReplicas int) string
 	metricsSpec.Resource = metricsResource
 
 	hpa_1.Spec.Metrics = append(hpa_1.Spec.Metrics, *metricsSpec)
+	hpa_1.Status = autoscaling.HorizontalPodAutoscaler{}.Status // set blank status for easier cleanup
 
 	hpa_1_yaml, err := Yml.Marshal(hpa_1)
 
@@ -169,6 +188,8 @@ func generateHorizontalPodAutoscalerSpec(stream []uint8, maxReplicas int) string
 		fmt.Printf("err: %v\n", err)
 		return err.Error()
 	}
+
+	hpa_1_yaml = hackToRemoveEmptyFields(hpa_1_yaml)
 
 	return string(hpa_1_yaml)
 }
