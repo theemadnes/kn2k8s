@@ -18,6 +18,6 @@ Optionally can override defaults (service type of `ClusterIP` on port `80`) via 
 
 ```cat samples/hello_revision_4.yaml | go run . -serviceType=LoadBalancer -servicePort=8080 | kubectl apply -f -```
 
-And HPA max replicas:
+And HPA max/min replicas:
 
-```cat samples/hello_revision_4.yaml | go run . -maxReplicas=10 -serviceType=LoadBalancer | kubectl apply -f -```
+```cat samples/hello_revision_4.yaml | go run . -maxReplicas=10 -minReplicas=2 -serviceType=LoadBalancer | kubectl apply -f -```

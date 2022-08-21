@@ -135,7 +135,7 @@ func generateServiceSpec(stream []uint8, serviceType string, servicePort int) st
 	return string(service_1_yaml)
 }
 
-func generateHorizontalPodAutoscalerSpec(stream []uint8, maxReplicas int) string {
+func generateHorizontalPodAutoscalerSpec(stream []uint8, minReplicas int, maxReplicas int) string {
 
 	// create HPA resource
 	hpa_1 := &autoscaling.HorizontalPodAutoscaler{}
@@ -148,9 +148,10 @@ func generateHorizontalPodAutoscalerSpec(stream []uint8, maxReplicas int) string
 	}
 
 	// set prelim vars
-	var minReplicas int32 = 1
 	var avgUtilization int32 = 50
 	var currentReplicas int32 = 1
+	var minReplicasPtr *int32 = new(int32)
+	*minReplicasPtr = int32(minReplicas)
 
 	// figure out if maxReplicas has been provided via CLI
 	if maxReplicas == 0 {
@@ -164,7 +165,7 @@ func generateHorizontalPodAutoscalerSpec(stream []uint8, maxReplicas int) string
 	hpa_1.Spec.ScaleTargetRef.APIVersion = "apps/v1"
 	hpa_1.Spec.ScaleTargetRef.Kind = "Deployment"
 	hpa_1.Spec.ScaleTargetRef.Name = rev.Labels["serving.knative.dev/service"]
-	hpa_1.Spec.MinReplicas = &minReplicas
+	hpa_1.Spec.MinReplicas = minReplicasPtr
 	hpa_1.Spec.MaxReplicas = int32(maxReplicas)
 	hpa_1.Status = autoscaling.HorizontalPodAutoscalerStatus{}
 	hpa_1.Status.CurrentReplicas = currentReplicas
@@ -199,7 +200,8 @@ func main() {
 	// pull optional command line params (used to configure service port & service type)
 	serviceTypePtr := flag.String("serviceType", "ClusterIP", "string to indicate type of service to create")
 	servicePortPtr := flag.Int("servicePort", 80, "int to set external port used by service")
-	maxReplicasPtr := flag.Int("maxReplicas", 0, "int to set maximum replicas via HPA") // default to zero to detect input
+	maxReplicasPtr := flag.Int("maxReplicas", 0, "int to set maximum replicas via HPA - otherwise will set to revision maxScale value") // default to zero to detect input
+	minReplicasPtr := flag.Int("minReplicas", 1, "int to set minimum replicas via HPA")
 
 	flag.Parse()
 
@@ -228,6 +230,6 @@ func main() {
 	fmt.Println("---")
 
 	// generate HPA YAML
-	fmt.Print(generateHorizontalPodAutoscalerSpec(output, *maxReplicasPtr))
+	fmt.Print(generateHorizontalPodAutoscalerSpec(output, *minReplicasPtr, *maxReplicasPtr))
 
 }
