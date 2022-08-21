@@ -34,6 +34,34 @@ func hackToRemoveEmptyFields(ymlBytes []byte) []byte {
 	return lines
 }
 
+func generateServiceAccountSpec(stream []uint8) string {
+
+	rev := &knative.Revision{}
+	sa_1 := &corev1.ServiceAccount{}
+
+	dec := k8Yaml.NewYAMLOrJSONDecoder(bytes.NewReader([]byte(stream)), 1000)
+
+	if err := dec.Decode(&rev); err != nil {
+		fmt.Printf("error decoding the yaml: %v", err)
+	}
+
+	// set up basics for service account
+	sa_1.APIVersion = "v1"
+	sa_1.Kind = "ServiceAccount"
+	sa_1.ObjectMeta.Name = rev.Labels["serving.knative.dev/service"]
+
+	sa_1_yaml, err := Yml.Marshal(sa_1)
+
+	if err != nil {
+		fmt.Printf("err: %v\n", err)
+		return err.Error()
+	}
+
+	sa_1_yaml = hackToRemoveEmptyFields(sa_1_yaml)
+
+	return string(sa_1_yaml)
+}
+
 func generateDeploymentSpec(stream []uint8) string {
 
 	rev := &knative.Revision{}
@@ -82,6 +110,9 @@ func generateDeploymentSpec(stream []uint8) string {
 
 	// copy the podspec container spec to the deployment container spec
 	dep_1.Spec.Template.Spec.Containers = pod_1.Spec.Containers
+
+	// set the service account
+	dep_1.Spec.Template.Spec.ServiceAccountName = s_name
 
 	dep_1_yaml, err := Yml.Marshal(dep_1)
 
@@ -216,6 +247,12 @@ func main() {
 		}
 		output = append(output, input)
 	}
+
+	// generate service account YAML
+	fmt.Print(generateServiceAccountSpec(output))
+
+	// add multi-resource delimeter
+	fmt.Println("---")
 
 	// generate deployment YAML
 	fmt.Print(generateDeploymentSpec(output))
