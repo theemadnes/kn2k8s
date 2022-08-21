@@ -50,6 +50,10 @@ func generateServiceAccountSpec(stream []uint8) string {
 	sa_1.Kind = "ServiceAccount"
 	sa_1.ObjectMeta.Name = rev.Labels["serving.knative.dev/service"]
 
+	// configure the KSA to be ready for Workload Identity
+	sa_1.Annotations = make(map[string]string)
+	sa_1.Annotations["iam.gke.io/gcp-service-account"] = rev.Spec.ServiceAccountName
+
 	sa_1_yaml, err := Yml.Marshal(sa_1)
 
 	if err != nil {
