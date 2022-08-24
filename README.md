@@ -4,6 +4,8 @@ command line tool for converting knative revision spec YAML to Kubernetes API sp
 
 The script expects input via stdin, so you'll need to pass the input via a pipe.
 
+It'll create a namespace, deployment, service account, service account, HPA, etc based on the source service name.
+
 #### usage
 
 Apply a locally stored knative revision spec:

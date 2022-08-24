@@ -24,6 +24,7 @@ import (
 // the benefit of doing this is that resources don't always show as `configured` even when there are no changes
 func hackToRemoveEmptyFields(ymlBytes []byte) []byte {
 	lines := bytes.Replace(ymlBytes, []byte("      creationTimestamp: null\n"), []byte(""), 1)
+	lines = bytes.Replace(lines, []byte("spec: {}\n"), []byte(""), 1)
 	lines = bytes.Replace(lines, []byte("  creationTimestamp: null\n"), []byte(""), -1)
 	lines = bytes.Replace(lines, []byte("status: {}\n"), []byte(""), 1)
 	lines = bytes.Replace(lines, []byte("status:\n"), []byte(""), 1)
@@ -32,6 +33,34 @@ func hackToRemoveEmptyFields(ymlBytes []byte) []byte {
 	lines = bytes.Replace(lines, []byte("currentMetrics: null\n"), []byte(""), 1)
 	lines = bytes.Replace(lines, []byte("    desiredReplicas: 0\n"), []byte(""), 1)
 	return lines
+}
+
+func generateNamespaceSpec(stream []uint8) string {
+
+	rev := &knative.Revision{}
+	ns_1 := &corev1.Namespace{}
+
+	dec := k8Yaml.NewYAMLOrJSONDecoder(bytes.NewReader([]byte(stream)), 1000)
+
+	if err := dec.Decode(&rev); err != nil {
+		fmt.Printf("error decoding the yaml: %v", err)
+	}
+
+	ns_1.APIVersion = "v1"
+	ns_1.Kind = "Namespace"
+	ns_1.ObjectMeta.Name = rev.Labels["serving.knative.dev/service"]
+
+	ns_1_yaml, err := Yml.Marshal(ns_1)
+
+	if err != nil {
+		fmt.Printf("err: %v\n", err)
+		return err.Error()
+	}
+
+	ns_1_yaml = hackToRemoveEmptyFields(ns_1_yaml)
+
+	return (string(ns_1_yaml))
+
 }
 
 func generateServiceAccountSpec(stream []uint8) string {
@@ -49,6 +78,7 @@ func generateServiceAccountSpec(stream []uint8) string {
 	sa_1.APIVersion = "v1"
 	sa_1.Kind = "ServiceAccount"
 	sa_1.ObjectMeta.Name = rev.Labels["serving.knative.dev/service"]
+	sa_1.ObjectMeta.Namespace = rev.Labels["serving.knative.dev/service"]
 
 	// configure the KSA to be ready for Workload Identity
 	sa_1.Annotations = make(map[string]string)
@@ -94,6 +124,7 @@ func generateDeploymentSpec(stream []uint8) string {
 	// set deployment name and replica count
 	dep_1.Name = s_name
 	dep_1.Spec.Replicas = &dep_replicas
+	dep_1.ObjectMeta.Namespace = rev.Labels["serving.knative.dev/service"]
 
 	// selector & labeling setup for deployment
 	app_label_selector_v1 := v1.LabelSelector{}
@@ -146,6 +177,7 @@ func generateServiceSpec(stream []uint8, serviceType string, servicePort int) st
 	service_1.Kind = "Service"
 	service_1.APIVersion = "v1"
 	service_1.Spec.Type = corev1.ServiceType(serviceType)
+	service_1.ObjectMeta.Namespace = rev.Labels["serving.knative.dev/service"]
 	service_port.Name = rev.Spec.Containers[0].Ports[0].Name
 	service_port.Protocol = rev.Spec.Containers[0].Ports[0].Protocol
 	service_port.Port = int32(servicePort)
@@ -197,6 +229,7 @@ func generateHorizontalPodAutoscalerSpec(stream []uint8, minReplicas int, maxRep
 	hpa_1.APIVersion = "autoscaling/v2beta2"
 	hpa_1.Kind = "HorizontalPodAutoscaler"
 	hpa_1.ObjectMeta.Name = rev.Labels["serving.knative.dev/service"]
+	hpa_1.ObjectMeta.Namespace = rev.Labels["serving.knative.dev/service"]
 	hpa_1.Spec.ScaleTargetRef.APIVersion = "apps/v1"
 	hpa_1.Spec.ScaleTargetRef.Kind = "Deployment"
 	hpa_1.Spec.ScaleTargetRef.Name = rev.Labels["serving.knative.dev/service"]
@@ -251,6 +284,12 @@ func main() {
 		}
 		output = append(output, input)
 	}
+
+	// generate namespace YAML
+	fmt.Print(generateNamespaceSpec(output))
+
+	// add multi-resource delimeter
+	fmt.Println("---")
 
 	// generate service account YAML
 	fmt.Print(generateServiceAccountSpec(output))
