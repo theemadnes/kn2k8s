@@ -1,0 +1,13 @@
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: sample-app
+  namespace: sample-app
+spec:
+  healthCheck:
+    checkIntervalSec: 15
+    port: 8080
+    type: HTTP
+    requestPath: /healthz
+  connectionDraining:
+    drainingTimeoutSec: 60

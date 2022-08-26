@@ -1,10 +1,10 @@
 # kn2k8s
 
-command line tool for converting knative revision spec YAML to Kubernetes API specs. 
+command line tool for converting knative revision spec YAML to Kubernetes API & Gateway API specs. 
 
 The script expects input via stdin, so you'll need to pass the input via a pipe.
 
-It'll create a namespace, deployment, service account, service account, HPA, etc based on the source service name.
+It'll create a namespace, deployment, service account, service account, HPA, HTTPRoute, etc based on the source service name.
 
 #### usage
 
