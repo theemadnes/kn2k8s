@@ -23,3 +23,7 @@ Optionally can override service defaults (service type of `ClusterIP` on port `8
 And HPA max/min replica defaults (minReplicas of `1` and maxReplicas from revision spec `maxReplicas`):
 
 ```cat samples/hello_revision_4.yaml | go run . -maxReplicas=10 -minReplicas=2 -serviceType=LoadBalancer | kubectl apply -f -```
+
+Or create a bunch of minReplicas:
+
+```cat samples/hello_revision_4.yaml | go run . -maxReplicas=50 -minReplicas=10 | kubectl apply -f - ```

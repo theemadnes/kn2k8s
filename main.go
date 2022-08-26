@@ -17,6 +17,7 @@ import (
 	knative "knative.dev/serving/pkg/apis/serving/v1"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gw "sigs.k8s.io/gateway-api/apis/v1beta1"
 	Yml "sigs.k8s.io/yaml"
 )
 
@@ -32,6 +33,7 @@ func hackToRemoveEmptyFields(ymlBytes []byte) []byte {
 	lines = bytes.Replace(lines, []byte("  loadBalancer: {}\n"), []byte(""), 1)
 	lines = bytes.Replace(lines, []byte("currentMetrics: null\n"), []byte(""), 1)
 	lines = bytes.Replace(lines, []byte("    desiredReplicas: 0\n"), []byte(""), 1)
+	lines = bytes.Replace(lines, []byte("  parents: null\n"), []byte(""), 1)
 	return lines
 }
 
@@ -263,6 +265,66 @@ func generateHorizontalPodAutoscalerSpec(stream []uint8, minReplicas int, maxRep
 	return string(hpa_1_yaml)
 }
 
+func generateHttpRouteSpec(stream []uint8, gwName string, gwNamespace string, svcPort int) string {
+
+	httpRoute_1 := gw.HTTPRoute{}
+	httpRouteParentRef := gw.ParentReference{}
+	httpRouteName := gw.ObjectName(gwName)
+	httpRouteNamespace := gw.Namespace(gwNamespace)
+	httpRouteRulesPathMatch := gw.HTTPPathMatch{}
+	httpRoutePathMatchType := gw.PathMatchType("PathPrefix")
+	httpRouteBackendRef := gw.HTTPBackendRef{}
+	httpRouteBackendPort := gw.PortNumber(svcPort)
+
+	rev := &knative.Revision{}
+
+	dec := k8Yaml.NewYAMLOrJSONDecoder(bytes.NewReader([]byte(stream)), 1000)
+
+	if err := dec.Decode(&rev); err != nil {
+		fmt.Printf("error decoding the yaml: %v", err)
+	}
+
+	// set path details
+	// httpRouteRulesPath := gw.PathMatchPathPrefix("/" + rev.Labels["serving.knative.dev/service"])
+	prefix := "/" + rev.Labels["serving.knative.dev/service"]
+	httpRouteRulesPathMatch.Value = &prefix
+	httpRouteRulesPathMatch.Type = &httpRoutePathMatchType
+	httpRouteBackendRef.Name = gw.ObjectName(rev.Labels["serving.knative.dev/service"])
+	httpRouteBackendRef.Port = &httpRouteBackendPort
+
+	// set API version and Kind
+	httpRoute_1.APIVersion = "gateway.networking.k8s.io/v1beta1"
+	httpRoute_1.Kind = "HTTPRoute"
+
+	// configure metadata
+	httpRoute_1.ObjectMeta.Name = rev.Labels["serving.knative.dev/service"]
+	httpRoute_1.ObjectMeta.Namespace = rev.Labels["serving.knative.dev/service"]
+
+	// configure nested fields
+	httpRouteParentRef.Name = httpRouteName
+	httpRouteParentRef.Namespace = &httpRouteNamespace
+	httpRoute_1.Spec.ParentRefs = make([]gw.ParentReference, 1)
+	httpRoute_1.Spec.ParentRefs[0] = httpRouteParentRef
+	httpRoute_1.Spec.Rules = make([]gw.HTTPRouteRule, 1)
+	//httpRoute_1.Spec.Rules[0] = httpRouteRules
+	httpRoute_1.Spec.Rules[0].Matches = make([]gw.HTTPRouteMatch, 1)
+	httpRoute_1.Spec.Rules[0].Matches[0].Path = &httpRouteRulesPathMatch
+	httpRoute_1.Spec.Rules[0].BackendRefs = make([]gw.HTTPBackendRef, 1)
+	httpRoute_1.Spec.Rules[0].BackendRefs[0] = httpRouteBackendRef
+
+	httpRoute_1_yaml, err := Yml.Marshal(httpRoute_1)
+
+	if err != nil {
+		fmt.Printf("err: %v\n", err)
+		return err.Error()
+	}
+
+	// clean up HTTPRoute output
+	httpRoute_1_yaml = hackToRemoveEmptyFields(httpRoute_1_yaml)
+
+	return string(httpRoute_1_yaml)
+}
+
 func main() {
 
 	// pull optional command line params (used to configure service port & service type)
@@ -270,6 +332,8 @@ func main() {
 	servicePortPtr := flag.Int("servicePort", 80, "int to set external port used by service")
 	maxReplicasPtr := flag.Int("maxReplicas", 0, "int to set maximum replicas via HPA - otherwise will set to revision maxScale value") // default to zero to detect input
 	minReplicasPtr := flag.Int("minReplicas", 1, "int to set minimum replicas via HPA")
+	gwNamePtr := flag.String("gatewayName", "external-http", "string of gateway object name")
+	gwNamespacePtr := flag.String("gatewayNamespace", "external-gw", "string of gateway namespace")
 
 	flag.Parse()
 
@@ -311,5 +375,11 @@ func main() {
 
 	// generate HPA YAML
 	fmt.Print(generateHorizontalPodAutoscalerSpec(output, *minReplicasPtr, *maxReplicasPtr))
+
+	// add multi-resource delimeter
+	fmt.Println("---")
+
+	// generate Gateway API HTTPRoute YAML
+	fmt.Print(generateHttpRouteSpec(output, *gwNamePtr, *gwNamespacePtr, *servicePortPtr))
 
 }
