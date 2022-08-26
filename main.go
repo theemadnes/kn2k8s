@@ -272,7 +272,7 @@ func generateHttpRouteSpec(stream []uint8, gwName string, gwNamespace string, sv
 	httpRouteName := gw.ObjectName(gwName)
 	httpRouteNamespace := gw.Namespace(gwNamespace)
 	httpRouteRulesPathMatch := gw.HTTPPathMatch{}
-	httpRoutePathMatchType := gw.PathMatchType("PathPrefix")
+	httpRoutePathMatchType := gw.PathMatchType("Exact")
 	httpRouteBackendRef := gw.HTTPBackendRef{}
 	httpRouteBackendPort := gw.PortNumber(svcPort)
 
