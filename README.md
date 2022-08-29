@@ -32,4 +32,4 @@ Or create a bunch of minReplicas:
 
 `-gatewayName` specify a different gateway resource
 
-`-gatewayNamespace` specifc a different namespace for the gateway resource
+`-gatewayNamespace` specify a different namespace for the gateway resource
