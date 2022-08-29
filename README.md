@@ -27,3 +27,8 @@ And HPA max/min replica defaults (minReplicas of `1` and maxReplicas from revisi
 Or create a bunch of minReplicas:
 
 ```cat samples/hello_00005_qud.yaml | go run . -maxReplicas=50 -minReplicas=10 | kubectl apply -f - ```
+
+#### other flags
+
+`-gatewayName` specify a different gateway resource
+`-gatewayNamespace` specifc a different namespace for the gateway resource
