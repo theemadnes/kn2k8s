@@ -10,7 +10,7 @@ It'll create a namespace, deployment, service account, service account, HPA, HTT
 
 Apply a locally stored knative revision spec:
 
-```cat samples/hello_revision_4.yaml | go run . | kubectl apply -f -```
+```cat samples/hello_00005_qud.yaml | go run . | kubectl apply -f -```
 
 *or* apply a spec from Cloud Run (managed), which takes a little while to get the YAML via `gcloud` CLI:
 
@@ -18,12 +18,12 @@ Apply a locally stored knative revision spec:
 
 Optionally can override service defaults (service type of `ClusterIP` on port `80`) via CLI flags:
 
-```cat samples/hello_revision_4.yaml | go run . -serviceType=LoadBalancer -servicePort=8080 | kubectl apply -f -```
+```cat samples/hello_00005_qud.yaml | go run . -serviceType=LoadBalancer -servicePort=8080 | kubectl apply -f -```
 
 And HPA max/min replica defaults (minReplicas of `1` and maxReplicas from revision spec `maxReplicas`):
 
-```cat samples/hello_revision_4.yaml | go run . -maxReplicas=10 -minReplicas=2 -serviceType=LoadBalancer | kubectl apply -f -```
+```cat samples/hello_00005_qud.yaml | go run . -maxReplicas=10 -minReplicas=2 -serviceType=LoadBalancer | kubectl apply -f -```
 
 Or create a bunch of minReplicas:
 
-```cat samples/hello_revision_4.yaml | go run . -maxReplicas=50 -minReplicas=10 | kubectl apply -f - ```
+```cat samples/hello_00005_qud.yaml | go run . -maxReplicas=50 -minReplicas=10 | kubectl apply -f - ```
