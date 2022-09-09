@@ -18,6 +18,8 @@ It'll create a namespace, deployment, service account, service account, HPA, HTT
 
 This requires that the cluster has a gateway api controller installed.
 
+>NOTE: because this tool uses the *service* name of a given revision, supplying multiple revisions from the same service will result in subsequent revisions overwriting previous ones
+
 ### USAGE
 
 first start by applying the gateway resources
