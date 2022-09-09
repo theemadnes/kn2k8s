@@ -18,7 +18,7 @@ It'll create a namespace, deployment, service account, service account, HPA, HTT
 
 This requires that the cluster has a gateway api controller installed.
 
-#### usage
+### USAGE
 
 first start by applying the gateway resources
 
@@ -26,7 +26,9 @@ first start by applying the gateway resources
 kubectl apply -f gateway/
 ```
 
-Then run
+>NOTE: if you're using your own gateway setup, make sure you pass the name of the gateway object and the namespace the gateway object is in via `--gatewayName` and `--gatewayNamespace` respectively
+
+Then run, after populating your manifest file with your revision details (revision id, region, and project id)
 
 ```
 go run . --manifestFile manifest.yaml
@@ -38,7 +40,7 @@ get help
 go run . --help
 ```
 
-#### output 
+### OUTPUT
 
 ```
 $ go run . --manifestFile manifest.yaml
