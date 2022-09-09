@@ -424,14 +424,7 @@ func main() {
 	//fmt.Printf("%v\n", r.Revision[1].RevisionId)
 
 	// cycle through revisions and process
-	for id, revision := range r.Revision {
-
-		// create subfolder per revision
-		pathPrefix := "output/" + timeString + "/" + strconv.Itoa(id) + "/"
-		err := os.MkdirAll(pathPrefix+"", 0755)
-		if err != nil {
-			log.Fatal(err)
-		}
+	for _, revision := range r.Revision {
 
 		// get revision info via gcloud
 		var out bytes.Buffer
@@ -443,7 +436,15 @@ func main() {
 			log.Fatal(cmd_err)
 		}
 
-		fmt.Println(getServiceInfo(out.Bytes()))
+		// get revision data
+		serviceInfo := getServiceInfo(out.Bytes())
+
+		// create subfolder per revision
+		pathPrefix := "output/" + timeString + "/" + serviceInfo["serviceName"] + "/"
+		err := os.MkdirAll(pathPrefix+"", 0755)
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		// create and apply YAML files
 		ns_err := os.WriteFile(pathPrefix+"ns.yaml", generateNamespaceSpec(out.Bytes()), 0755)
