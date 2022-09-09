@@ -389,9 +389,6 @@ func main() {
 		}
 	*/
 
-	// get file name from command line
-	//argsWithoutProg := os.Args[1:]
-
 	// get timestamp
 	timeString := string(time.Now().Format(time.RFC3339))
 	timeString = strings.Replace(timeString, ":", "", -1)
@@ -415,12 +412,12 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		// get revision info via gcloud
 		var out bytes.Buffer
 		cmd := exec.Command("gcloud", "run", "revisions", "describe", revision.RevisionId, "--region="+revision.Region, "--project="+revision.ProjectId, "--format=yaml")
 		cmd.Stdout = &out
 		cmd_err := cmd.Run()
-
-		//fmt.Println(cmd)
 
 		if err != nil {
 			log.Fatal(cmd_err)
@@ -462,60 +459,6 @@ func main() {
 			log.Fatal(route_err)
 		}
 		kubectlApply(pathPrefix + "route.yaml")
-
-		// apply generated YAML to K8s cluster
-		//fmt.Println(out.String())
-		//fmt.Println("---")
-		//fmt.Print(generateNamespaceSpec(out.Bytes()))
-
-		/*
-			fmt.Println("---")
-			fmt.Print(generateServiceAccountSpec(out.Bytes()))
-			fmt.Println("---")
-			fmt.Print(generateDeploymentSpec(out.Bytes()))
-			fmt.Println("---")
-			fmt.Print(generateServiceSpec(out.Bytes(), *serviceTypePtr, *servicePortPtr))
-			fmt.Println("---")
-			fmt.Print(generateHorizontalPodAutoscalerSpec(out.Bytes(), *minReplicasPtr, *maxReplicasPtr))
-			fmt.Println("---")
-			fmt.Print(generateHttpRouteSpec(out.Bytes(), *gwNamePtr, *gwNamespacePtr, *servicePortPtr))
-			fmt.Println("---")
-		*/
 	}
 
-	// old YAML generation
-	/*
-		// generate namespace YAML
-		fmt.Print(generateNamespaceSpec(output))
-
-		// add multi-resource delimeter
-		fmt.Println("---")
-
-		// generate service account YAML
-		fmt.Print(generateServiceAccountSpec(output))
-
-		// add multi-resource delimeter
-		fmt.Println("---")
-
-		// generate deployment YAML
-		fmt.Print(generateDeploymentSpec(output))
-
-		// add multi-resource delimeter
-		fmt.Println("---")
-
-		// generate service YAML
-		fmt.Print(generateServiceSpec(output, *serviceTypePtr, *servicePortPtr))
-
-		// add multi-resource delimeter
-		fmt.Println("---")
-
-		// generate HPA YAML
-		fmt.Print(generateHorizontalPodAutoscalerSpec(output, *minReplicasPtr, *maxReplicasPtr))
-
-		// add multi-resource delimeter
-		fmt.Println("---")
-
-		// generate Gateway API HTTPRoute YAML
-		fmt.Print(generateHttpRouteSpec(output, *gwNamePtr, *gwNamespacePtr, *servicePortPtr))
-	*/
 }
