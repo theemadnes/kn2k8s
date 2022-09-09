@@ -1,14 +1,17 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
-	"flag"
 	"fmt"
-	"io"
+	"io/ioutil"
+	"log"
 	"os"
+	"os/exec"
 	"strconv"
+	"strings"
+	"time"
 
+	"gopkg.in/yaml.v2"
 	k8Yaml "k8s.io/apimachinery/pkg/util/yaml"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -20,6 +23,32 @@ import (
 	gw "sigs.k8s.io/gateway-api/apis/v1beta1"
 	Yml "sigs.k8s.io/yaml"
 )
+
+// struct for unmarshalling revision details from command line
+type Revisions struct {
+	Revision []struct {
+		RevisionId string `yaml:"revision_id"`
+		Region     string `yaml:"region"`
+		ProjectId  string `yaml:"project_id"`
+	} `yaml:"revisions"`
+}
+
+// function to read revision manifest from command line
+func readRevisions(filename string) (Revisions, error) {
+	buf, err := ioutil.ReadFile(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//r := &revisions{}
+	r := Revisions{}
+	err = yaml.Unmarshal(buf, &r)
+	if err != nil {
+		return r, fmt.Errorf("in file %q: %v", filename, err)
+	}
+
+	return r, nil
+}
 
 // super hacky way of removing empty fields
 // the benefit of doing this is that resources don't always show as `configured` even when there are no changes
@@ -37,7 +66,7 @@ func hackToRemoveEmptyFields(ymlBytes []byte) []byte {
 	return lines
 }
 
-func generateNamespaceSpec(stream []uint8) string {
+func generateNamespaceSpec(stream []uint8) []byte {
 
 	rev := &knative.Revision{}
 	ns_1 := &corev1.Namespace{}
@@ -45,7 +74,7 @@ func generateNamespaceSpec(stream []uint8) string {
 	dec := k8Yaml.NewYAMLOrJSONDecoder(bytes.NewReader([]byte(stream)), 1000)
 
 	if err := dec.Decode(&rev); err != nil {
-		fmt.Printf("error decoding the yaml: %v", err)
+		log.Fatal(err)
 	}
 
 	ns_1.APIVersion = "v1"
@@ -55,17 +84,16 @@ func generateNamespaceSpec(stream []uint8) string {
 	ns_1_yaml, err := Yml.Marshal(ns_1)
 
 	if err != nil {
-		fmt.Printf("err: %v\n", err)
-		return err.Error()
+		log.Fatal(err)
 	}
 
 	ns_1_yaml = hackToRemoveEmptyFields(ns_1_yaml)
 
-	return (string(ns_1_yaml))
+	return ns_1_yaml
 
 }
 
-func generateServiceAccountSpec(stream []uint8) string {
+func generateServiceAccountSpec(stream []uint8) []byte {
 
 	rev := &knative.Revision{}
 	sa_1 := &corev1.ServiceAccount{}
@@ -73,7 +101,7 @@ func generateServiceAccountSpec(stream []uint8) string {
 	dec := k8Yaml.NewYAMLOrJSONDecoder(bytes.NewReader([]byte(stream)), 1000)
 
 	if err := dec.Decode(&rev); err != nil {
-		fmt.Printf("error decoding the yaml: %v", err)
+		log.Fatal(err)
 	}
 
 	// set up basics for service account
@@ -89,16 +117,15 @@ func generateServiceAccountSpec(stream []uint8) string {
 	sa_1_yaml, err := Yml.Marshal(sa_1)
 
 	if err != nil {
-		fmt.Printf("err: %v\n", err)
-		return err.Error()
+		log.Fatal(err)
 	}
 
 	sa_1_yaml = hackToRemoveEmptyFields(sa_1_yaml)
 
-	return string(sa_1_yaml)
+	return sa_1_yaml
 }
 
-func generateDeploymentSpec(stream []uint8) string {
+func generateDeploymentSpec(stream []uint8) []byte {
 
 	rev := &knative.Revision{}
 	pod_1 := &corev1.Pod{}
@@ -108,7 +135,7 @@ func generateDeploymentSpec(stream []uint8) string {
 	dec := k8Yaml.NewYAMLOrJSONDecoder(bytes.NewReader([]byte(stream)), 1000)
 
 	if err := dec.Decode(&rev); err != nil {
-		fmt.Printf("error decoding the yaml: %v", err)
+		log.Fatal(err)
 	}
 
 	// copy podspec from YAML import to new pod
@@ -154,16 +181,15 @@ func generateDeploymentSpec(stream []uint8) string {
 	dep_1_yaml, err := Yml.Marshal(dep_1)
 
 	if err != nil {
-		fmt.Printf("err: %v\n", err)
-		return err.Error()
+		log.Fatal(err)
 	}
 
 	dep_1_yaml = hackToRemoveEmptyFields(dep_1_yaml)
 
-	return string(dep_1_yaml)
+	return dep_1_yaml
 }
 
-func generateServiceSpec(stream []uint8, serviceType string, servicePort int) string {
+func generateServiceSpec(stream []uint8, serviceType string, servicePort int) []byte {
 
 	service_1 := &corev1.Service{}
 	rev := &knative.Revision{}
@@ -172,7 +198,7 @@ func generateServiceSpec(stream []uint8, serviceType string, servicePort int) st
 	dec := k8Yaml.NewYAMLOrJSONDecoder(bytes.NewReader([]byte(stream)), 1000)
 
 	if err := dec.Decode(&rev); err != nil {
-		fmt.Printf("error decoding the yaml: %v", err)
+		log.Fatal(err)
 	}
 
 	// set Kind & API
@@ -195,16 +221,15 @@ func generateServiceSpec(stream []uint8, serviceType string, servicePort int) st
 	service_1_yaml, err := Yml.Marshal(service_1)
 
 	if err != nil {
-		fmt.Printf("err: %v\n", err)
-		return err.Error()
+		log.Fatal(err)
 	}
 
 	service_1_yaml = hackToRemoveEmptyFields(service_1_yaml)
 
-	return string(service_1_yaml)
+	return service_1_yaml
 }
 
-func generateHorizontalPodAutoscalerSpec(stream []uint8, minReplicas int, maxReplicas int) string {
+func generateHorizontalPodAutoscalerSpec(stream []uint8, minReplicas int, maxReplicas int) []byte {
 
 	// create HPA resource
 	hpa_1 := &autoscaling.HorizontalPodAutoscaler{}
@@ -213,7 +238,7 @@ func generateHorizontalPodAutoscalerSpec(stream []uint8, minReplicas int, maxRep
 	dec := k8Yaml.NewYAMLOrJSONDecoder(bytes.NewReader([]byte(stream)), 1000)
 
 	if err := dec.Decode(&rev); err != nil {
-		fmt.Printf("error decoding the yaml: %v", err)
+		log.Fatal(err)
 	}
 
 	// set prelim vars
@@ -256,16 +281,15 @@ func generateHorizontalPodAutoscalerSpec(stream []uint8, minReplicas int, maxRep
 	hpa_1_yaml, err := Yml.Marshal(hpa_1)
 
 	if err != nil {
-		fmt.Printf("err: %v\n", err)
-		return err.Error()
+		log.Fatal(err)
 	}
 
 	hpa_1_yaml = hackToRemoveEmptyFields(hpa_1_yaml)
 
-	return string(hpa_1_yaml)
+	return hpa_1_yaml
 }
 
-func generateHttpRouteSpec(stream []uint8, gwName string, gwNamespace string, svcPort int) string {
+func generateHttpRouteSpec(stream []uint8, gwName string, gwNamespace string, svcPort int) []byte {
 
 	httpRoute_1 := gw.HTTPRoute{}
 	httpRouteParentRef := gw.ParentReference{}
@@ -281,7 +305,7 @@ func generateHttpRouteSpec(stream []uint8, gwName string, gwNamespace string, sv
 	dec := k8Yaml.NewYAMLOrJSONDecoder(bytes.NewReader([]byte(stream)), 1000)
 
 	if err := dec.Decode(&rev); err != nil {
-		fmt.Printf("error decoding the yaml: %v", err)
+		log.Fatal(err)
 	}
 
 	// set path details
@@ -315,71 +339,167 @@ func generateHttpRouteSpec(stream []uint8, gwName string, gwNamespace string, sv
 	httpRoute_1_yaml, err := Yml.Marshal(httpRoute_1)
 
 	if err != nil {
-		fmt.Printf("err: %v\n", err)
-		return err.Error()
+		log.Fatal(err)
 	}
 
 	// clean up HTTPRoute output
 	httpRoute_1_yaml = hackToRemoveEmptyFields(httpRoute_1_yaml)
 
-	return string(httpRoute_1_yaml)
+	return httpRoute_1_yaml
 }
 
 func main() {
 
 	// pull optional command line params (used to configure service port & service type)
-	serviceTypePtr := flag.String("serviceType", "ClusterIP", "string to indicate type of service to create")
-	servicePortPtr := flag.Int("servicePort", 80, "int to set external port used by service")
-	maxReplicasPtr := flag.Int("maxReplicas", 0, "int to set maximum replicas via HPA - otherwise will set to revision maxScale value") // default to zero to detect input
-	minReplicasPtr := flag.Int("minReplicas", 1, "int to set minimum replicas via HPA")
-	gwNamePtr := flag.String("gatewayName", "external-http", "string of gateway object name")
-	gwNamespacePtr := flag.String("gatewayNamespace", "external-gw", "string of gateway namespace")
+	/*
+		serviceTypePtr := flag.String("serviceType", "ClusterIP", "string to indicate type of service to create")
+		servicePortPtr := flag.Int("servicePort", 80, "int to set external port used by service")
+		maxReplicasPtr := flag.Int("maxReplicas", 0, "int to set maximum replicas via HPA - otherwise will set to revision maxScale value") // default to zero to detect input
+		minReplicasPtr := flag.Int("minReplicas", 1, "int to set minimum replicas via HPA")
+		gwNamePtr := flag.String("gatewayName", "external-http", "string of gateway object name")
+		gwNamespacePtr := flag.String("gatewayNamespace", "external-gw", "string of gateway namespace")
 
-	flag.Parse()
+		flag.Parse()
 
-	// set up piping stdin to utility
-	reader := bufio.NewReader(os.Stdin)
-	var output []uint8
+		/*
+			// set up piping stdin to utility
+			reader := bufio.NewReader(os.Stdin)
+			var output []uint8
 
-	for {
-		input, err := reader.ReadByte()
-		if err != nil && err == io.EOF {
-			break
-		}
-		output = append(output, input)
+			for {
+				input, err := reader.ReadByte()
+				if err != nil && err == io.EOF {
+					break
+				}
+				output = append(output, input)
+			}
+	*/
+
+	// get file name from command line
+	argsWithoutProg := os.Args[1:]
+
+	// get timestamp
+	timeString := string(time.Now().Format(time.RFC3339))
+	timeString = strings.Replace(timeString, ":", "", -1)
+
+	fmt.Printf("Reading manifest file %v\n", string(argsWithoutProg[0]))
+
+	r, err := readRevisions(argsWithoutProg[0])
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	// generate namespace YAML
-	fmt.Print(generateNamespaceSpec(output))
+	//fmt.Printf("%v\n", r.Revision[0].RevisionId)
+	//fmt.Printf("%v\n", r.Revision[1].RevisionId)
 
-	// add multi-resource delimeter
-	fmt.Println("---")
+	// cycle through revisions and process
+	for id, revision := range r.Revision {
 
-	// generate service account YAML
-	fmt.Print(generateServiceAccountSpec(output))
+		// create subfolder per revision
+		pathPrefix := "output/" + timeString + "/" + strconv.Itoa(id) + "/"
+		err := os.MkdirAll(pathPrefix+"", 0755)
+		if err != nil {
+			log.Fatal(err)
+		}
+		var out bytes.Buffer
+		cmd := exec.Command("gcloud", "run", "revisions", "describe", revision.RevisionId, "--region="+revision.Region, "--project="+revision.ProjectId, "--format=yaml")
+		cmd.Stdout = &out
+		cmd_err := cmd.Run()
 
-	// add multi-resource delimeter
-	fmt.Println("---")
+		//fmt.Println(cmd)
 
-	// generate deployment YAML
-	fmt.Print(generateDeploymentSpec(output))
+		if err != nil {
+			log.Fatal(cmd_err)
+		}
 
-	// add multi-resource delimeter
-	fmt.Println("---")
+		// create and apply YAML files
+		ns_err := os.WriteFile(pathPrefix+"1_ns.yaml", generateNamespaceSpec(out.Bytes()), 0755)
+		if ns_err != nil {
+			log.Fatal(ns_err)
+		}
+		sa_err := os.WriteFile(pathPrefix+"2_sa.yaml", generateServiceAccountSpec(out.Bytes()), 0755)
+		if sa_err != nil {
+			log.Fatal(sa_err)
+		}
+		deployment_err := os.WriteFile(pathPrefix+"3_deployment.yaml", generateDeploymentSpec(out.Bytes()), 0755)
+		if deployment_err != nil {
+			log.Fatal(deployment_err)
+		}
+		service_err := os.WriteFile(pathPrefix+"4_service.yaml", generateServiceSpec(out.Bytes(), "ClusterIP", 80), 0755)
+		if service_err != nil {
+			log.Fatal(service_err)
+		}
+		hpa_err := os.WriteFile(pathPrefix+"5_hpa.yaml", generateHorizontalPodAutoscalerSpec(out.Bytes(), 1, 100), 0755)
+		if hpa_err != nil {
+			log.Fatal(hpa_err)
+		}
+		route_err := os.WriteFile(pathPrefix+"6_route.yaml", generateHttpRouteSpec(out.Bytes(), "external-http", "external-gw", 80), 0755)
+		if route_err != nil {
+			log.Fatal(route_err)
+		}
 
-	// generate service YAML
-	fmt.Print(generateServiceSpec(output, *serviceTypePtr, *servicePortPtr))
+		// apply generated YAML to K8s cluster
+		//fmt.Println(out.String())
+		//fmt.Println("---")
+		//fmt.Print(generateNamespaceSpec(out.Bytes()))
+		var kubectl_out bytes.Buffer
+		kubectl_cmd := exec.Command("kubectl", "apply -f", pathPrefix+"")
+		fmt.Println(kubectl_cmd)
+		kubectl_cmd.Stdout = &kubectl_out
+		kubectl_err := kubectl_cmd.Run()
+		fmt.Println(kubectl_out.String())
+		if kubectl_err != nil {
+			log.Fatal(kubectl_err)
+		}
+		fmt.Println(kubectl_out.String())
+		/*
+			fmt.Println("---")
+			fmt.Print(generateServiceAccountSpec(out.Bytes()))
+			fmt.Println("---")
+			fmt.Print(generateDeploymentSpec(out.Bytes()))
+			fmt.Println("---")
+			fmt.Print(generateServiceSpec(out.Bytes(), *serviceTypePtr, *servicePortPtr))
+			fmt.Println("---")
+			fmt.Print(generateHorizontalPodAutoscalerSpec(out.Bytes(), *minReplicasPtr, *maxReplicasPtr))
+			fmt.Println("---")
+			fmt.Print(generateHttpRouteSpec(out.Bytes(), *gwNamePtr, *gwNamespacePtr, *servicePortPtr))
+			fmt.Println("---")
+		*/
+	}
 
-	// add multi-resource delimeter
-	fmt.Println("---")
+	// old YAML generation
+	/*
+		// generate namespace YAML
+		fmt.Print(generateNamespaceSpec(output))
 
-	// generate HPA YAML
-	fmt.Print(generateHorizontalPodAutoscalerSpec(output, *minReplicasPtr, *maxReplicasPtr))
+		// add multi-resource delimeter
+		fmt.Println("---")
 
-	// add multi-resource delimeter
-	fmt.Println("---")
+		// generate service account YAML
+		fmt.Print(generateServiceAccountSpec(output))
 
-	// generate Gateway API HTTPRoute YAML
-	fmt.Print(generateHttpRouteSpec(output, *gwNamePtr, *gwNamespacePtr, *servicePortPtr))
+		// add multi-resource delimeter
+		fmt.Println("---")
 
+		// generate deployment YAML
+		fmt.Print(generateDeploymentSpec(output))
+
+		// add multi-resource delimeter
+		fmt.Println("---")
+
+		// generate service YAML
+		fmt.Print(generateServiceSpec(output, *serviceTypePtr, *servicePortPtr))
+
+		// add multi-resource delimeter
+		fmt.Println("---")
+
+		// generate HPA YAML
+		fmt.Print(generateHorizontalPodAutoscalerSpec(output, *minReplicasPtr, *maxReplicasPtr))
+
+		// add multi-resource delimeter
+		fmt.Println("---")
+
+		// generate Gateway API HTTPRoute YAML
+		fmt.Print(generateHttpRouteSpec(output, *gwNamePtr, *gwNamespacePtr, *servicePortPtr))
+	*/
 }
