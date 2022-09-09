@@ -425,41 +425,41 @@ func main() {
 		}
 
 		// create and apply YAML files
-		ns_err := os.WriteFile(pathPrefix+"1_ns.yaml", generateNamespaceSpec(out.Bytes()), 0755)
+		ns_err := os.WriteFile(pathPrefix+"ns.yaml", generateNamespaceSpec(out.Bytes()), 0755)
 		if ns_err != nil {
 			log.Fatal(ns_err)
 		}
-		kubectlApply(pathPrefix + "1_ns.yaml")
+		kubectlApply(pathPrefix + "ns.yaml")
 
-		sa_err := os.WriteFile(pathPrefix+"2_sa.yaml", generateServiceAccountSpec(out.Bytes()), 0755)
+		sa_err := os.WriteFile(pathPrefix+"sa.yaml", generateServiceAccountSpec(out.Bytes()), 0755)
 		if sa_err != nil {
 			log.Fatal(sa_err)
 		}
-		kubectlApply(pathPrefix + "2_sa.yaml")
+		kubectlApply(pathPrefix + "sa.yaml")
 
-		deployment_err := os.WriteFile(pathPrefix+"3_deployment.yaml", generateDeploymentSpec(out.Bytes()), 0755)
+		deployment_err := os.WriteFile(pathPrefix+"deployment.yaml", generateDeploymentSpec(out.Bytes()), 0755)
 		if deployment_err != nil {
 			log.Fatal(deployment_err)
 		}
-		kubectlApply(pathPrefix + "3_deployment.yaml")
+		kubectlApply(pathPrefix + "deployment.yaml")
 
-		service_err := os.WriteFile(pathPrefix+"4_service.yaml", generateServiceSpec(out.Bytes(), "ClusterIP", 80), 0755)
+		service_err := os.WriteFile(pathPrefix+"service.yaml", generateServiceSpec(out.Bytes(), "ClusterIP", 80), 0755)
 		if service_err != nil {
 			log.Fatal(service_err)
 		}
-		kubectlApply(pathPrefix + "4_service.yaml")
+		kubectlApply(pathPrefix + "service.yaml")
 
-		hpa_err := os.WriteFile(pathPrefix+"5_hpa.yaml", generateHorizontalPodAutoscalerSpec(out.Bytes(), 1, 100), 0755)
+		hpa_err := os.WriteFile(pathPrefix+"hpa.yaml", generateHorizontalPodAutoscalerSpec(out.Bytes(), 1, 100), 0755)
 		if hpa_err != nil {
 			log.Fatal(hpa_err)
 		}
-		kubectlApply(pathPrefix + "5_hpa.yaml")
+		kubectlApply(pathPrefix + "hpa.yaml")
 
-		route_err := os.WriteFile(pathPrefix+"6_route.yaml", generateHttpRouteSpec(out.Bytes(), "external-http", "external-gw", 80), 0755)
+		route_err := os.WriteFile(pathPrefix+"route.yaml", generateHttpRouteSpec(out.Bytes(), "external-http", "external-gw", 80), 0755)
 		if route_err != nil {
 			log.Fatal(route_err)
 		}
-		kubectlApply(pathPrefix + "6_route.yaml")
+		kubectlApply(pathPrefix + "route.yaml")
 
 		// apply generated YAML to K8s cluster
 		//fmt.Println(out.String())
