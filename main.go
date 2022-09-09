@@ -348,6 +348,18 @@ func generateHttpRouteSpec(stream []uint8, gwName string, gwNamespace string, sv
 	return httpRoute_1_yaml
 }
 
+func kubectlApply(path string) {
+	var kubectl_out bytes.Buffer
+	kubectl_cmd := exec.Command("kubectl", "apply", "-f", path)
+	fmt.Println(kubectl_cmd)
+	kubectl_cmd.Stdout = &kubectl_out
+	kubectl_err := kubectl_cmd.Run()
+	if kubectl_err != nil {
+		log.Fatal(kubectl_err)
+	}
+	fmt.Printf(kubectl_out.String())
+}
+
 func main() {
 
 	// pull optional command line params (used to configure service port & service type)
@@ -417,41 +429,43 @@ func main() {
 		if ns_err != nil {
 			log.Fatal(ns_err)
 		}
+		kubectlApply(pathPrefix + "1_ns.yaml")
+
 		sa_err := os.WriteFile(pathPrefix+"2_sa.yaml", generateServiceAccountSpec(out.Bytes()), 0755)
 		if sa_err != nil {
 			log.Fatal(sa_err)
 		}
+		kubectlApply(pathPrefix + "2_sa.yaml")
+
 		deployment_err := os.WriteFile(pathPrefix+"3_deployment.yaml", generateDeploymentSpec(out.Bytes()), 0755)
 		if deployment_err != nil {
 			log.Fatal(deployment_err)
 		}
+		kubectlApply(pathPrefix + "3_deployment.yaml")
+
 		service_err := os.WriteFile(pathPrefix+"4_service.yaml", generateServiceSpec(out.Bytes(), "ClusterIP", 80), 0755)
 		if service_err != nil {
 			log.Fatal(service_err)
 		}
+		kubectlApply(pathPrefix + "4_service.yaml")
+
 		hpa_err := os.WriteFile(pathPrefix+"5_hpa.yaml", generateHorizontalPodAutoscalerSpec(out.Bytes(), 1, 100), 0755)
 		if hpa_err != nil {
 			log.Fatal(hpa_err)
 		}
+		kubectlApply(pathPrefix + "5_hpa.yaml")
+
 		route_err := os.WriteFile(pathPrefix+"6_route.yaml", generateHttpRouteSpec(out.Bytes(), "external-http", "external-gw", 80), 0755)
 		if route_err != nil {
 			log.Fatal(route_err)
 		}
+		kubectlApply(pathPrefix + "6_route.yaml")
 
 		// apply generated YAML to K8s cluster
 		//fmt.Println(out.String())
 		//fmt.Println("---")
 		//fmt.Print(generateNamespaceSpec(out.Bytes()))
-		var kubectl_out bytes.Buffer
-		kubectl_cmd := exec.Command("kubectl", "apply -f", pathPrefix+"")
-		fmt.Println(kubectl_cmd)
-		kubectl_cmd.Stdout = &kubectl_out
-		kubectl_err := kubectl_cmd.Run()
-		fmt.Println(kubectl_out.String())
-		if kubectl_err != nil {
-			log.Fatal(kubectl_err)
-		}
-		fmt.Println(kubectl_out.String())
+
 		/*
 			fmt.Println("---")
 			fmt.Print(generateServiceAccountSpec(out.Bytes()))
