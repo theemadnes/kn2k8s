@@ -422,9 +422,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	//fmt.Printf("%v\n", r.Revision[0].RevisionId)
-	//fmt.Printf("%v\n", r.Revision[1].RevisionId)
-
+	// create output table
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
 	t.AppendHeader(table.Row{"Service", "Revision", "Image", "CPU", "Memory", "Path"})
