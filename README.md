@@ -18,4 +18,8 @@ It'll create a namespace, deployment, service account, service account, HPA, HTT
 
 #### usage
 
-```go run . manifest.yaml```
+```go run . --manifestFile manifest.yaml```
+
+get help
+
+```go run . --help```

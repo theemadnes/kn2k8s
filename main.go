@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -363,40 +364,41 @@ func kubectlApply(path string) {
 func main() {
 
 	// pull optional command line params (used to configure service port & service type)
+
+	manifestFilePtr := flag.String("manifestFile", "manifest.yaml", "input file name")
+	serviceTypePtr := flag.String("serviceType", "ClusterIP", "string to indicate type of service to create")
+	servicePortPtr := flag.Int("servicePort", 80, "int to set external port used by service")
+	maxReplicasPtr := flag.Int("maxReplicas", 0, "int to set maximum replicas via HPA - otherwise will set to revision maxScale value") // default to zero to detect input
+	minReplicasPtr := flag.Int("minReplicas", 1, "int to set minimum replicas via HPA")
+	gwNamePtr := flag.String("gatewayName", "external-http", "string of gateway object name")
+	gwNamespacePtr := flag.String("gatewayNamespace", "external-gw", "string of gateway namespace")
+
+	flag.Parse()
+
 	/*
-		serviceTypePtr := flag.String("serviceType", "ClusterIP", "string to indicate type of service to create")
-		servicePortPtr := flag.Int("servicePort", 80, "int to set external port used by service")
-		maxReplicasPtr := flag.Int("maxReplicas", 0, "int to set maximum replicas via HPA - otherwise will set to revision maxScale value") // default to zero to detect input
-		minReplicasPtr := flag.Int("minReplicas", 1, "int to set minimum replicas via HPA")
-		gwNamePtr := flag.String("gatewayName", "external-http", "string of gateway object name")
-		gwNamespacePtr := flag.String("gatewayNamespace", "external-gw", "string of gateway namespace")
+		// set up piping stdin to utility
+		reader := bufio.NewReader(os.Stdin)
+		var output []uint8
 
-		flag.Parse()
-
-		/*
-			// set up piping stdin to utility
-			reader := bufio.NewReader(os.Stdin)
-			var output []uint8
-
-			for {
-				input, err := reader.ReadByte()
-				if err != nil && err == io.EOF {
-					break
-				}
-				output = append(output, input)
+		for {
+			input, err := reader.ReadByte()
+			if err != nil && err == io.EOF {
+				break
 			}
+			output = append(output, input)
+		}
 	*/
 
 	// get file name from command line
-	argsWithoutProg := os.Args[1:]
+	//argsWithoutProg := os.Args[1:]
 
 	// get timestamp
 	timeString := string(time.Now().Format(time.RFC3339))
 	timeString = strings.Replace(timeString, ":", "", -1)
 
-	fmt.Printf("Reading manifest file %v\n", string(argsWithoutProg[0]))
+	fmt.Printf("Reading manifest file %v\n", *manifestFilePtr)
 
-	r, err := readRevisions(argsWithoutProg[0])
+	r, err := readRevisions(*manifestFilePtr)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -443,19 +445,19 @@ func main() {
 		}
 		kubectlApply(pathPrefix + "deployment.yaml")
 
-		service_err := os.WriteFile(pathPrefix+"service.yaml", generateServiceSpec(out.Bytes(), "ClusterIP", 80), 0755)
+		service_err := os.WriteFile(pathPrefix+"service.yaml", generateServiceSpec(out.Bytes(), *serviceTypePtr, *servicePortPtr), 0755)
 		if service_err != nil {
 			log.Fatal(service_err)
 		}
 		kubectlApply(pathPrefix + "service.yaml")
 
-		hpa_err := os.WriteFile(pathPrefix+"hpa.yaml", generateHorizontalPodAutoscalerSpec(out.Bytes(), 1, 100), 0755)
+		hpa_err := os.WriteFile(pathPrefix+"hpa.yaml", generateHorizontalPodAutoscalerSpec(out.Bytes(), *minReplicasPtr, *maxReplicasPtr), 0755)
 		if hpa_err != nil {
 			log.Fatal(hpa_err)
 		}
 		kubectlApply(pathPrefix + "hpa.yaml")
 
-		route_err := os.WriteFile(pathPrefix+"route.yaml", generateHttpRouteSpec(out.Bytes(), "external-http", "external-gw", 80), 0755)
+		route_err := os.WriteFile(pathPrefix+"route.yaml", generateHttpRouteSpec(out.Bytes(), *gwNamePtr, *gwNamespacePtr, 80), 0755)
 		if route_err != nil {
 			log.Fatal(route_err)
 		}
