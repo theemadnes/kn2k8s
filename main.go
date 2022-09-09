@@ -361,6 +361,26 @@ func kubectlApply(path string) {
 	fmt.Printf(kubectl_out.String())
 }
 
+func getServiceInfo(stream []uint8) map[string]string {
+
+	revInfo := make(map[string]string)
+
+	rev := &knative.Revision{}
+
+	dec := k8Yaml.NewYAMLOrJSONDecoder(bytes.NewReader([]byte(stream)), 1000)
+
+	if err := dec.Decode(&rev); err != nil {
+		log.Fatal(err)
+	}
+
+	revInfo["serviceName"] = rev.Labels["serving.knative.dev/service"]
+	revInfo["image"] = rev.Spec.Containers[0].Image
+	revInfo["cpu"] = rev.Spec.Containers[0].Resources.Limits.Cpu().String()
+	revInfo["memory"] = rev.Spec.Containers[0].Resources.Limits.Memory().String()
+
+	return revInfo
+}
+
 func main() {
 
 	// pull optional command line params (used to configure service port & service type)
@@ -422,6 +442,8 @@ func main() {
 		if err != nil {
 			log.Fatal(cmd_err)
 		}
+
+		fmt.Println(getServiceInfo(out.Bytes()))
 
 		// create and apply YAML files
 		ns_err := os.WriteFile(pathPrefix+"ns.yaml", generateNamespaceSpec(out.Bytes()), 0755)
