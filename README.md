@@ -20,6 +20,12 @@ This requires that the cluster has a gateway api controller installed.
 
 #### usage
 
+first start by applying the gateway resources
+
+```kubectl apply -f gateway/```
+
+Then run
+
 ```go run . --manifestFile manifest.yaml```
 
 get help
