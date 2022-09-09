@@ -20,6 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	knative "knative.dev/serving/pkg/apis/serving/v1"
 
+	"github.com/jedib0t/go-pretty/v6/table"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gw "sigs.k8s.io/gateway-api/apis/v1beta1"
 	Yml "sigs.k8s.io/yaml"
@@ -352,13 +353,13 @@ func generateHttpRouteSpec(stream []uint8, gwName string, gwNamespace string, sv
 func kubectlApply(path string) {
 	var kubectl_out bytes.Buffer
 	kubectl_cmd := exec.Command("kubectl", "apply", "-f", path)
-	fmt.Println(kubectl_cmd)
+	//fmt.Println(kubectl_cmd)
 	kubectl_cmd.Stdout = &kubectl_out
 	kubectl_err := kubectl_cmd.Run()
 	if kubectl_err != nil {
 		log.Fatal(kubectl_err)
 	}
-	fmt.Printf(kubectl_out.String())
+	//fmt.Printf(kubectl_out.String())
 }
 
 func getServiceInfo(stream []uint8) map[string]string {
@@ -374,6 +375,7 @@ func getServiceInfo(stream []uint8) map[string]string {
 	}
 
 	revInfo["serviceName"] = rev.Labels["serving.knative.dev/service"]
+	revInfo["revisionId"] = rev.Name
 	revInfo["image"] = rev.Spec.Containers[0].Image
 	revInfo["cpu"] = rev.Spec.Containers[0].Resources.Limits.Cpu().String()
 	revInfo["memory"] = rev.Spec.Containers[0].Resources.Limits.Memory().String()
@@ -423,6 +425,10 @@ func main() {
 	//fmt.Printf("%v\n", r.Revision[0].RevisionId)
 	//fmt.Printf("%v\n", r.Revision[1].RevisionId)
 
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"Service", "Revision", "Image", "CPU", "Memory", "Path"})
+
 	// cycle through revisions and process
 	for _, revision := range r.Revision {
 
@@ -438,6 +444,8 @@ func main() {
 
 		// get revision data
 		serviceInfo := getServiceInfo(out.Bytes())
+		t.AppendRow([]interface{}{serviceInfo["serviceName"], serviceInfo["revisionId"], serviceInfo["image"], serviceInfo["cpu"], serviceInfo["memory"], "/" + serviceInfo["serviceName"]})
+		t.AppendSeparator()
 
 		// create subfolder per revision
 		pathPrefix := "output/" + timeString + "/" + serviceInfo["serviceName"] + "/"
@@ -484,4 +492,5 @@ func main() {
 		kubectlApply(pathPrefix + "route.yaml")
 	}
 
+	t.Render()
 }
