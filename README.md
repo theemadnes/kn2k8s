@@ -20,6 +20,8 @@ This requires that the cluster has a gateway api controller installed.
 
 >NOTE: because this tool uses the *service* name of a given revision, supplying multiple revisions from the same service will result in subsequent revisions overwriting previous ones
 
+![](render1662780404182.gif)
+
 ### USAGE
 
 first start by applying the gateway resources
