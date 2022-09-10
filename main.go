@@ -20,7 +20,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	knative "knative.dev/serving/pkg/apis/serving/v1"
 
+	//"github.com/jedib0t/go-pretty/v6/progress"
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/schollz/progressbar/v3"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gw "sigs.k8s.io/gateway-api/apis/v1beta1"
 	Yml "sigs.k8s.io/yaml"
@@ -427,6 +430,10 @@ func main() {
 	t.SetOutputMirror(os.Stdout)
 	t.AppendHeader(table.Row{"Service", "Revision", "Image", "CPU", "Memory", "Path"})
 
+	// create progress
+	//p := progress.NewWriter()
+	//p.SetOutputWriter(os.Stdout)
+
 	// cycle through revisions and process
 	for _, revision := range r.Revision {
 
@@ -442,8 +449,21 @@ func main() {
 
 		// get revision data
 		serviceInfo := getServiceInfo(out.Bytes())
+
+		// create table output
 		t.AppendRow([]interface{}{serviceInfo["serviceName"], serviceInfo["revisionId"], serviceInfo["image"], serviceInfo["cpu"], serviceInfo["memory"], "/" + serviceInfo["serviceName"]})
 		t.AppendSeparator()
+
+		// set up progress bar
+		fmt.Printf("\nProcessing revision %v of service %v\n", serviceInfo["revisionId"], serviceInfo["serviceName"])
+		bar := progressbar.NewOptions(100, progressbar.OptionSetWidth(50), progressbar.OptionEnableColorCodes(true), progressbar.OptionSetTheme(progressbar.Theme{
+			Saucer:        "[green]=[reset]",
+			SaucerHead:    "[green]>[reset]",
+			SaucerPadding: " ",
+			BarStart:      "[",
+			BarEnd:        "]",
+		}))
+		//bar = bar
 
 		// create subfolder per revision
 		pathPrefix := "output/" + timeString + "/" + serviceInfo["serviceName"] + "/"
@@ -451,6 +471,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		bar.Add(10)
 
 		// create and apply YAML files
 		ns_err := os.WriteFile(pathPrefix+"ns.yaml", generateNamespaceSpec(out.Bytes()), 0755)
@@ -458,37 +479,44 @@ func main() {
 			log.Fatal(ns_err)
 		}
 		kubectlApply(pathPrefix + "ns.yaml")
+		bar.Add(15)
 
 		sa_err := os.WriteFile(pathPrefix+"sa.yaml", generateServiceAccountSpec(out.Bytes()), 0755)
 		if sa_err != nil {
 			log.Fatal(sa_err)
 		}
 		kubectlApply(pathPrefix + "sa.yaml")
+		bar.Add(15)
 
 		deployment_err := os.WriteFile(pathPrefix+"deployment.yaml", generateDeploymentSpec(out.Bytes()), 0755)
 		if deployment_err != nil {
 			log.Fatal(deployment_err)
 		}
 		kubectlApply(pathPrefix + "deployment.yaml")
+		bar.Add(15)
 
 		service_err := os.WriteFile(pathPrefix+"service.yaml", generateServiceSpec(out.Bytes(), *serviceTypePtr, *servicePortPtr), 0755)
 		if service_err != nil {
 			log.Fatal(service_err)
 		}
 		kubectlApply(pathPrefix + "service.yaml")
+		bar.Add(15)
 
 		hpa_err := os.WriteFile(pathPrefix+"hpa.yaml", generateHorizontalPodAutoscalerSpec(out.Bytes(), *minReplicasPtr, *maxReplicasPtr), 0755)
 		if hpa_err != nil {
 			log.Fatal(hpa_err)
 		}
 		kubectlApply(pathPrefix + "hpa.yaml")
+		bar.Add(15)
 
 		route_err := os.WriteFile(pathPrefix+"route.yaml", generateHttpRouteSpec(out.Bytes(), *gwNamePtr, *gwNamespacePtr, 80), 0755)
 		if route_err != nil {
 			log.Fatal(route_err)
 		}
 		kubectlApply(pathPrefix + "route.yaml")
+		bar.Add(15)
 	}
 
+	fmt.Printf("\n")
 	t.Render()
 }
