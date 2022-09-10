@@ -517,6 +517,6 @@ func main() {
 		bar.Add(15)
 	}
 
-	fmt.Printf("\n")
+	fmt.Printf("\nResults:\n")
 	t.Render()
 }
