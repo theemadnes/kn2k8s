@@ -63,3 +63,5 @@ Results:
 | hello   | hello-00005-qud | us-docker.pkg.dev/google-samples/containers/gke/whereami@sha256:9957f5ff3096a83bae4e0952faaebcac740557e7fb2a642ed38bf5cb64c45795 | 1   | 512Mi  | /hello |
 +---------+-----------------+----------------------------------------------------------------------------------------------------------------------------------+-----+--------+--------+
 ```
+
+Beyond the output to `stdout`, this program will dump a timestamped set of K8s YAML within a subfolder of `output`, so you can always re-apply stuff if it doesn't work right away.
