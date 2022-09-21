@@ -24,7 +24,13 @@ This requires that the cluster has a gateway api controller installed.
 
 ### USAGE
 
-first start by applying the gateway resources
+apply the gateway CRDs
+
+```
+kubectl apply -k "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v0.5.0"
+```
+
+apply the gateway resources
 
 ```
 kubectl apply -f gateway/
@@ -36,6 +42,12 @@ Then run, after populating your manifest file with your revision details (revisi
 
 ```
 go run . --manifestFile manifest.yaml
+```
+
+instead of applying to the cluster in kubectx, just generate the YAML via `--mode yaml`
+
+```
+go run . --manifestFile manifest.yaml --mode yaml
 ```
 
 get help

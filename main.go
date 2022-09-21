@@ -304,6 +304,7 @@ func generateHttpRouteSpec(stream []uint8, gwName string, gwNamespace string, sv
 	httpRoutePathMatchType := gw.PathMatchType("Exact")
 	httpRouteBackendRef := gw.HTTPBackendRef{}
 	httpRouteBackendPort := gw.PortNumber(svcPort)
+	//httpRouteFilter := gw.HTTPRequestRedirectFilter{}
 
 	rev := &knative.Revision{}
 
@@ -330,16 +331,53 @@ func generateHttpRouteSpec(stream []uint8, gwName string, gwNamespace string, sv
 	httpRoute_1.ObjectMeta.Namespace = rev.Labels["serving.knative.dev/service"]
 
 	// configure nested fields
+	//basePath := "/"
+	hostName := "*"
+	rwFilter := gw.HTTPURLRewriteFilter{}
+	//rwFilter.Path = &gw.HTTPPathModifier{}
+	//rwFilter.Path.ReplaceFullPath = &basePath
+	rwFilter.Hostname = (*gw.PreciseHostname)(&hostName)
 	httpRouteParentRef.Name = httpRouteName
 	httpRouteParentRef.Namespace = &httpRouteNamespace
 	httpRoute_1.Spec.ParentRefs = make([]gw.ParentReference, 1)
 	httpRoute_1.Spec.ParentRefs[0] = httpRouteParentRef
 	httpRoute_1.Spec.Rules = make([]gw.HTTPRouteRule, 1)
 	//httpRoute_1.Spec.Rules[0] = httpRouteRules
+	httpRoute_1.Spec.Rules[0].Filters = make([]gw.HTTPRouteFilter, 1)
 	httpRoute_1.Spec.Rules[0].Matches = make([]gw.HTTPRouteMatch, 1)
+	httpRoute_1.Spec.Rules[0].Filters[0].Type = gw.HTTPRouteFilterURLRewrite
+	httpRoute_1.Spec.Rules[0].Filters[0].URLRewrite = &rwFilter
+	//httpRoute_1.Spec.Rules[0].Filters[0].URLRewrite.Path = gw.HTTPURLRewriteFilter.
+	//httpRoute_1.Spec.Rules[0].Filters[0].URLRewrite.Path.ReplaceFullPath = &basePath
 	httpRoute_1.Spec.Rules[0].Matches[0].Path = &httpRouteRulesPathMatch
 	httpRoute_1.Spec.Rules[0].BackendRefs = make([]gw.HTTPBackendRef, 1)
 	httpRoute_1.Spec.Rules[0].BackendRefs[0] = httpRouteBackendRef
+
+	/*
+		// configure path redirect
+		basePath := "/"
+		log.Println(basePath)
+		//urlRewrite := gw.HTTPRouteFilterURLRewrite
+		//urlRewrite
+		pm := gw.HTTPURLRewriteFilter{}
+		//pm.Path.Type = "URLRewrite"
+		//pm.Path.ReplaceFullPath = &basePath
+		//pm.Path.Type
+		//httpRouteFilter.Path.ReplaceFullPath = &basePath
+		//httpRouteFilter.Path.Type = gw.HTTPPathModifierType(gw.HTTPRouteFilterRequestRedirect)
+		//httpRoute_1.Spec.Rules[0].Filters = make([]gw.HTTPRouteFilter, 1) //append(httpRoute_1.Spec.Rules[0].Filters)
+		httpRoute_1.Spec.Rules[0].Filters = make([]gw.HTTPURLRewriteFilter, 1) //append(httpRoute_1.Spec.Rules[0].Filters)
+		httpRoute_1.Spec.Rules[0].Filters[0] = &pm
+		//httpRoute_1.Spec.Rules[0].Filters[0].Type = "RequestRedirect"
+		//httpRoute_1.Spec.Rules[0].Filters[0].RequestRedirect.Path.ReplaceFullPath = &basePath
+		//httpRoute_1.Spec.Rules[0].Filters[0].RequestRedirect.Path.Type = pm
+		//httpRoute_1.Spec.Rules[0].Filters[0].RequestRedirect.Path.ReplaceFullPath = &basePath
+		//httpRoute_1.Spec.Rules[0].Filters[0].URLRewrite
+		//httpRoute_1.Spec.Rules[0].Filters[0].Type = gw.HTTPRouteFilterURLRewrite
+		//httpRoute_1.Spec.Rules[0].Filters[0].URLRewrite.Path.ReplaceFullPath = &basePath
+		//httpRoute_1.Spec.Rules[0].Filters[0].URLRewrite = &pm
+		//httpRoute_1.Spec.Rules[0].Filters[0].URLRewrite.Path.ReplaceFullPath = &basePath
+	*/
 
 	httpRoute_1_yaml, err := Yml.Marshal(httpRoute_1)
 
@@ -397,6 +435,7 @@ func main() {
 	minReplicasPtr := flag.Int("minReplicas", 1, "int to set minimum replicas via HPA")
 	gwNamePtr := flag.String("gatewayName", "external-http", "string of gateway object name")
 	gwNamespacePtr := flag.String("gatewayNamespace", "external-gw", "string of gateway namespace")
+	modePtr := flag.String("mode", "default", "set to `yaml` to dump YAML only instead of applying")
 
 	flag.Parse()
 
@@ -424,6 +463,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	fmt.Printf("Dumping YAML to %v\n", timeString+"/")
 
 	// create output table
 	t := table.NewWriter()
@@ -478,45 +519,62 @@ func main() {
 		if ns_err != nil {
 			log.Fatal(ns_err)
 		}
-		kubectlApply(pathPrefix + "ns.yaml")
+		if *modePtr != "yaml" {
+			kubectlApply(pathPrefix + "ns.yaml")
+		}
 		bar.Add(15)
 
 		sa_err := os.WriteFile(pathPrefix+"sa.yaml", generateServiceAccountSpec(out.Bytes()), 0755)
 		if sa_err != nil {
 			log.Fatal(sa_err)
 		}
-		kubectlApply(pathPrefix + "sa.yaml")
+		if *modePtr != "yaml" {
+			kubectlApply(pathPrefix + "sa.yaml")
+		}
 		bar.Add(15)
 
 		deployment_err := os.WriteFile(pathPrefix+"deployment.yaml", generateDeploymentSpec(out.Bytes()), 0755)
 		if deployment_err != nil {
 			log.Fatal(deployment_err)
 		}
-		kubectlApply(pathPrefix + "deployment.yaml")
+		if *modePtr != "yaml" {
+			kubectlApply(pathPrefix + "deployment.yaml")
+		}
 		bar.Add(15)
 
 		service_err := os.WriteFile(pathPrefix+"service.yaml", generateServiceSpec(out.Bytes(), *serviceTypePtr, *servicePortPtr), 0755)
 		if service_err != nil {
 			log.Fatal(service_err)
 		}
-		kubectlApply(pathPrefix + "service.yaml")
+		if *modePtr != "yaml" {
+			kubectlApply(pathPrefix + "service.yaml")
+		}
 		bar.Add(15)
 
 		hpa_err := os.WriteFile(pathPrefix+"hpa.yaml", generateHorizontalPodAutoscalerSpec(out.Bytes(), *minReplicasPtr, *maxReplicasPtr), 0755)
 		if hpa_err != nil {
 			log.Fatal(hpa_err)
 		}
-		kubectlApply(pathPrefix + "hpa.yaml")
+		if *modePtr != "yaml" {
+			kubectlApply(pathPrefix + "hpa.yaml")
+		}
 		bar.Add(15)
 
 		route_err := os.WriteFile(pathPrefix+"route.yaml", generateHttpRouteSpec(out.Bytes(), *gwNamePtr, *gwNamespacePtr, 80), 0755)
 		if route_err != nil {
 			log.Fatal(route_err)
 		}
-		kubectlApply(pathPrefix + "route.yaml")
+		if *modePtr != "yaml" {
+			kubectlApply(pathPrefix + "route.yaml")
+		}
 		bar.Add(15)
 	}
 
-	fmt.Printf("\nResults:\n")
-	t.Render()
+	if *modePtr != "yaml" {
+		fmt.Printf("\nResults:\n")
+		t.Render()
+	} else {
+		fmt.Printf("\nYAML dumped\n")
+	}
+
 }
