@@ -44,7 +44,7 @@ Then run, after populating your manifest file with your revision details (revisi
 go run . --manifestFile manifest.yaml
 ```
 
-instead of applying to the cluster in kubectx, just generate the YAML via `--mode yaml`
+> instead of applying output YAML to the cluster in kubectx, just generate the YAML via `--mode yaml`
 
 ```
 go run . --manifestFile manifest.yaml --mode yaml
