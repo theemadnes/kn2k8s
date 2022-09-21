@@ -61,6 +61,7 @@ go run . --help
 ```
 $ go run . --manifestFile manifest.yaml
 Reading manifest file manifest.yaml
+Dumping YAML to 2022-09-21T005644-0500/
 
 Processing revision hola-00001-tof of service hola
  100% [==================================================]         
