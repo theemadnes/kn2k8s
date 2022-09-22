@@ -331,28 +331,41 @@ func generateHttpRouteSpec(stream []uint8, gwName string, gwNamespace string, sv
 	httpRoute_1.ObjectMeta.Namespace = rev.Labels["serving.knative.dev/service"]
 
 	// configure nested fields
-	//basePath := "/"
-	hostName := "*"
-	rwFilter := gw.HTTPURLRewriteFilter{}
-	//rwFilter.Path = &gw.HTTPPathModifier{}
-	//rwFilter.Path.ReplaceFullPath = &basePath
-	rwFilter.Hostname = (*gw.PreciseHostname)(&hostName)
 	httpRouteParentRef.Name = httpRouteName
 	httpRouteParentRef.Namespace = &httpRouteNamespace
 	httpRoute_1.Spec.ParentRefs = make([]gw.ParentReference, 1)
 	httpRoute_1.Spec.ParentRefs[0] = httpRouteParentRef
 	httpRoute_1.Spec.Rules = make([]gw.HTTPRouteRule, 1)
 	//httpRoute_1.Spec.Rules[0] = httpRouteRules
-	httpRoute_1.Spec.Rules[0].Filters = make([]gw.HTTPRouteFilter, 1)
 	httpRoute_1.Spec.Rules[0].Matches = make([]gw.HTTPRouteMatch, 1)
-	httpRoute_1.Spec.Rules[0].Filters[0].Type = gw.HTTPRouteFilterURLRewrite
-	httpRoute_1.Spec.Rules[0].Filters[0].URLRewrite = &rwFilter
-	//httpRoute_1.Spec.Rules[0].Filters[0].URLRewrite.Path = gw.HTTPURLRewriteFilter.
-	//httpRoute_1.Spec.Rules[0].Filters[0].URLRewrite.Path.ReplaceFullPath = &basePath
 	httpRoute_1.Spec.Rules[0].Matches[0].Path = &httpRouteRulesPathMatch
 	httpRoute_1.Spec.Rules[0].BackendRefs = make([]gw.HTTPBackendRef, 1)
 	httpRoute_1.Spec.Rules[0].BackendRefs[0] = httpRouteBackendRef
 
+	/*
+		// configure nested fields
+		//basePath := "/"
+		hostName := "*"
+		rwFilter := gw.HTTPURLRewriteFilter{}
+		//rwFilter.Path = &gw.HTTPPathModifier{}
+		//rwFilter.Path.ReplaceFullPath = &basePath
+		rwFilter.Hostname = (*gw.PreciseHostname)(&hostName)
+		httpRouteParentRef.Name = httpRouteName
+		httpRouteParentRef.Namespace = &httpRouteNamespace
+		httpRoute_1.Spec.ParentRefs = make([]gw.ParentReference, 1)
+		httpRoute_1.Spec.ParentRefs[0] = httpRouteParentRef
+		httpRoute_1.Spec.Rules = make([]gw.HTTPRouteRule, 1)
+		//httpRoute_1.Spec.Rules[0] = httpRouteRules
+		httpRoute_1.Spec.Rules[0].Filters = make([]gw.HTTPRouteFilter, 1)
+		httpRoute_1.Spec.Rules[0].Matches = make([]gw.HTTPRouteMatch, 1)
+		httpRoute_1.Spec.Rules[0].Filters[0].Type = gw.HTTPRouteFilterURLRewrite
+		httpRoute_1.Spec.Rules[0].Filters[0].URLRewrite = &rwFilter
+		//httpRoute_1.Spec.Rules[0].Filters[0].URLRewrite.Path = gw.HTTPURLRewriteFilter.
+		//httpRoute_1.Spec.Rules[0].Filters[0].URLRewrite.Path.ReplaceFullPath = &basePath
+		httpRoute_1.Spec.Rules[0].Matches[0].Path = &httpRouteRulesPathMatch
+		httpRoute_1.Spec.Rules[0].BackendRefs = make([]gw.HTTPBackendRef, 1)
+		httpRoute_1.Spec.Rules[0].BackendRefs[0] = httpRouteBackendRef
+	*/
 	/*
 		// configure path redirect
 		basePath := "/"
