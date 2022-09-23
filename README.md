@@ -27,7 +27,8 @@ This requires that the cluster has a gateway api controller installed.
 apply the gateway CRDs
 
 ```
-kubectl apply -k "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v0.5.0"
+#kubectl apply -k "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v0.5.0" # standard release channel
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.5.0/experimental-install.yaml # experimental channel
 ```
 
 apply the gateway resources

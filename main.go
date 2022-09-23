@@ -26,6 +26,8 @@ import (
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gw "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	//gw "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	Yml "sigs.k8s.io/yaml"
 )
 
@@ -297,6 +299,7 @@ func generateHorizontalPodAutoscalerSpec(stream []uint8, minReplicas int, maxRep
 func generateHttpRouteSpec(stream []uint8, gwName string, gwNamespace string, svcPort int) []byte {
 
 	httpRoute_1 := gw.HTTPRoute{}
+	//httpRoute_2 := gw.
 	httpRouteParentRef := gw.ParentReference{}
 	httpRouteName := gw.ObjectName(gwName)
 	httpRouteNamespace := gw.Namespace(gwNamespace)
@@ -342,55 +345,14 @@ func generateHttpRouteSpec(stream []uint8, gwName string, gwNamespace string, sv
 	httpRoute_1.Spec.Rules[0].BackendRefs = make([]gw.HTTPBackendRef, 1)
 	httpRoute_1.Spec.Rules[0].BackendRefs[0] = httpRouteBackendRef
 
-	/*
-		// configure nested fields
-		//basePath := "/"
-		hostName := "*"
-		rwFilter := gw.HTTPURLRewriteFilter{}
-		//rwFilter.Path = &gw.HTTPPathModifier{}
-		//rwFilter.Path.ReplaceFullPath = &basePath
-		rwFilter.Hostname = (*gw.PreciseHostname)(&hostName)
-		httpRouteParentRef.Name = httpRouteName
-		httpRouteParentRef.Namespace = &httpRouteNamespace
-		httpRoute_1.Spec.ParentRefs = make([]gw.ParentReference, 1)
-		httpRoute_1.Spec.ParentRefs[0] = httpRouteParentRef
-		httpRoute_1.Spec.Rules = make([]gw.HTTPRouteRule, 1)
-		//httpRoute_1.Spec.Rules[0] = httpRouteRules
-		httpRoute_1.Spec.Rules[0].Filters = make([]gw.HTTPRouteFilter, 1)
-		httpRoute_1.Spec.Rules[0].Matches = make([]gw.HTTPRouteMatch, 1)
-		httpRoute_1.Spec.Rules[0].Filters[0].Type = gw.HTTPRouteFilterURLRewrite
-		httpRoute_1.Spec.Rules[0].Filters[0].URLRewrite = &rwFilter
-		//httpRoute_1.Spec.Rules[0].Filters[0].URLRewrite.Path = gw.HTTPURLRewriteFilter.
-		//httpRoute_1.Spec.Rules[0].Filters[0].URLRewrite.Path.ReplaceFullPath = &basePath
-		httpRoute_1.Spec.Rules[0].Matches[0].Path = &httpRouteRulesPathMatch
-		httpRoute_1.Spec.Rules[0].BackendRefs = make([]gw.HTTPBackendRef, 1)
-		httpRoute_1.Spec.Rules[0].BackendRefs[0] = httpRouteBackendRef
-	*/
-	/*
-		// configure path redirect
-		basePath := "/"
-		log.Println(basePath)
-		//urlRewrite := gw.HTTPRouteFilterURLRewrite
-		//urlRewrite
-		pm := gw.HTTPURLRewriteFilter{}
-		//pm.Path.Type = "URLRewrite"
-		//pm.Path.ReplaceFullPath = &basePath
-		//pm.Path.Type
-		//httpRouteFilter.Path.ReplaceFullPath = &basePath
-		//httpRouteFilter.Path.Type = gw.HTTPPathModifierType(gw.HTTPRouteFilterRequestRedirect)
-		//httpRoute_1.Spec.Rules[0].Filters = make([]gw.HTTPRouteFilter, 1) //append(httpRoute_1.Spec.Rules[0].Filters)
-		httpRoute_1.Spec.Rules[0].Filters = make([]gw.HTTPURLRewriteFilter, 1) //append(httpRoute_1.Spec.Rules[0].Filters)
-		httpRoute_1.Spec.Rules[0].Filters[0] = &pm
-		//httpRoute_1.Spec.Rules[0].Filters[0].Type = "RequestRedirect"
-		//httpRoute_1.Spec.Rules[0].Filters[0].RequestRedirect.Path.ReplaceFullPath = &basePath
-		//httpRoute_1.Spec.Rules[0].Filters[0].RequestRedirect.Path.Type = pm
-		//httpRoute_1.Spec.Rules[0].Filters[0].RequestRedirect.Path.ReplaceFullPath = &basePath
-		//httpRoute_1.Spec.Rules[0].Filters[0].URLRewrite
-		//httpRoute_1.Spec.Rules[0].Filters[0].Type = gw.HTTPRouteFilterURLRewrite
-		//httpRoute_1.Spec.Rules[0].Filters[0].URLRewrite.Path.ReplaceFullPath = &basePath
-		//httpRoute_1.Spec.Rules[0].Filters[0].URLRewrite = &pm
-		//httpRoute_1.Spec.Rules[0].Filters[0].URLRewrite.Path.ReplaceFullPath = &basePath
-	*/
+	// handle path rewrites # CAN'T DO THIS YET AS IT'S NOT IMPLEMENTED
+	/*basePath := ""
+	httpRoute_1.Spec.Rules[0].Filters = make([]gw.HTTPRouteFilter, 1)
+	httpRoute_1.Spec.Rules[0].Filters[0].Type = "URLRewrite"
+	httpRoute_1.Spec.Rules[0].Filters[0].URLRewrite = &gw.HTTPURLRewriteFilter{}
+	httpRoute_1.Spec.Rules[0].Filters[0].URLRewrite.Path = &gw.HTTPPathModifier{}
+	httpRoute_1.Spec.Rules[0].Filters[0].URLRewrite.Path.Type = "ReplaceFullPath"
+	httpRoute_1.Spec.Rules[0].Filters[0].URLRewrite.Path.ReplaceFullPath = &basePath*/
 
 	httpRoute_1_yaml, err := Yml.Marshal(httpRoute_1)
 
@@ -477,7 +439,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Dumping YAML to %v\n", timeString+"/")
+	fmt.Printf("Dumping YAML to %v\n", "output/"+timeString+"/")
 
 	// create output table
 	t := table.NewWriter()
