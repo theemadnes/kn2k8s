@@ -367,15 +367,20 @@ func generateHttpRouteSpec(stream []uint8, gwName string, gwNamespace string, sv
 }
 
 func kubectlApply(path string) {
-	var kubectl_out bytes.Buffer
+
 	kubectl_cmd := exec.Command("kubectl", "apply", "-f", path)
-	//fmt.Println(kubectl_cmd)
-	kubectl_cmd.Stdout = &kubectl_out
+	var out bytes.Buffer
+	var stderr bytes.Buffer
+	kubectl_cmd.Stdout = &out
+	kubectl_cmd.Stderr = &stderr
 	kubectl_err := kubectl_cmd.Run()
+
 	if kubectl_err != nil {
-		log.Fatal(kubectl_err)
+
+		//log.Fatal(kubectl_err.Error() + ": " + stderr.String())
+		log.Fatal(stderr.String())
+
 	}
-	//fmt.Printf(kubectl_out.String())
 }
 
 func getServiceInfo(stream []uint8) map[string]string {
