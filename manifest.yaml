@@ -3,7 +3,8 @@ revisions:
 - revision_id: hola-00001-tof
   region: us-central1
   project_id: am-arg-01
-- revision_id: hello-00009-feg
+#- revision_id: hello-00009-feg
+- revision_id: hello-00008-seb
   region: us-central1
   project_id: am-arg-01
 - revision_id: test-from-other-project-00001-qer

@@ -437,124 +437,194 @@ func main() {
 	timeString := string(time.Now().Format(time.RFC3339))
 	timeString = strings.Replace(timeString, ":", "", -1)
 
-	fmt.Printf("Reading manifest file %v\n", *manifestFilePtr)
+	fmt.Printf("# reading manifest file %v\n", *manifestFilePtr)
 
 	r, err := readRevisions(*manifestFilePtr)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Dumping YAML to %v\n", "output/"+timeString+"/")
+	fmt.Printf("# dumping YAML to %v\n", "output/"+timeString+"/")
 
-	// create output table
-	t := table.NewWriter()
-	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"Service", "Revision", "Image", "CPU", "Memory", "Path"})
+	// decide whether we run in default "apply" mode where script automatically applies to current kubecontxt or,
+	// if `--mode yaml`, just dump the YAML to stdout. note that in either case, the YAML will also be written to
+	// a time-stamped subfolder of `ouput/`
+	if *modePtr == "yaml" {
+		// cycle through revisions and process
+		for _, revision := range r.Revision {
 
-	// create progress
-	//p := progress.NewWriter()
-	//p.SetOutputWriter(os.Stdout)
+			// get revision info via gcloud
+			var out bytes.Buffer
+			cmd := exec.Command("gcloud", "run", "revisions", "describe", revision.RevisionId, "--region="+revision.Region, "--project="+revision.ProjectId, "--format=yaml")
+			cmd.Stdout = &out
+			cmd_err := cmd.Run()
 
-	// cycle through revisions and process
-	for _, revision := range r.Revision {
+			if err != nil {
+				log.Fatal(cmd_err)
+			}
 
-		// get revision info via gcloud
-		var out bytes.Buffer
-		cmd := exec.Command("gcloud", "run", "revisions", "describe", revision.RevisionId, "--region="+revision.Region, "--project="+revision.ProjectId, "--format=yaml")
-		cmd.Stdout = &out
-		cmd_err := cmd.Run()
+			// get revision data
+			serviceInfo := getServiceInfo(out.Bytes())
 
-		if err != nil {
-			log.Fatal(cmd_err)
+			// create subfolder per revision
+			pathPrefix := "output/" + timeString + "/" + serviceInfo["serviceName"] + "/"
+			err := os.MkdirAll(pathPrefix+"", 0755)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			// create and apply YAML files
+			namespaceSpec := generateNamespaceSpec(out.Bytes())
+			ns_err := os.WriteFile(pathPrefix+"ns.yaml", namespaceSpec, 0755)
+			if ns_err != nil {
+				log.Fatal(ns_err)
+			}
+			fmt.Printf(string(namespaceSpec))
+			fmt.Print("---\n")
+
+			serviceAccountSpec := generateServiceAccountSpec(out.Bytes())
+			sa_err := os.WriteFile(pathPrefix+"sa.yaml", serviceAccountSpec, 0755)
+			if sa_err != nil {
+				log.Fatal(sa_err)
+			}
+			fmt.Printf(string(serviceAccountSpec))
+			fmt.Print("---\n")
+
+			deploymentSpec := generateDeploymentSpec(out.Bytes())
+			deployment_err := os.WriteFile(pathPrefix+"deployment.yaml", deploymentSpec, 0755)
+			if deployment_err != nil {
+				log.Fatal(deployment_err)
+			}
+			fmt.Printf(string(deploymentSpec))
+			fmt.Print("---\n")
+
+			serviceSpec := generateServiceSpec(out.Bytes(), *serviceTypePtr, *servicePortPtr)
+			service_err := os.WriteFile(pathPrefix+"service.yaml", serviceSpec, 0755)
+			if service_err != nil {
+				log.Fatal(service_err)
+			}
+			fmt.Printf(string(serviceSpec))
+			fmt.Print("---\n")
+
+			hpaSpec := generateHorizontalPodAutoscalerSpec(out.Bytes(), *minReplicasPtr, *maxReplicasPtr)
+			hpa_err := os.WriteFile(pathPrefix+"hpa.yaml", hpaSpec, 0755)
+			if hpa_err != nil {
+				log.Fatal(hpa_err)
+			}
+			fmt.Printf(string(hpaSpec))
+			fmt.Print("---\n")
+
+			routeSpec := generateHttpRouteSpec(out.Bytes(), *gwNamePtr, *gwNamespacePtr, 80)
+			route_err := os.WriteFile(pathPrefix+"route.yaml", routeSpec, 0755)
+			if route_err != nil {
+				log.Fatal(route_err)
+			}
+			fmt.Printf(string(routeSpec))
+			fmt.Print("---\n")
+
 		}
-
-		// get revision data
-		serviceInfo := getServiceInfo(out.Bytes())
-
-		// create table output
-		t.AppendRow([]interface{}{serviceInfo["serviceName"], serviceInfo["revisionId"], serviceInfo["image"], serviceInfo["cpu"], serviceInfo["memory"], "/" + serviceInfo["serviceName"]})
-		t.AppendSeparator()
-
-		// set up progress bar
-		fmt.Printf("\nProcessing revision %v of service %v\n", serviceInfo["revisionId"], serviceInfo["serviceName"])
-		bar := progressbar.NewOptions(100, progressbar.OptionSetWidth(50), progressbar.OptionEnableColorCodes(true), progressbar.OptionSetTheme(progressbar.Theme{
-			Saucer:        "[green]=[reset]",
-			SaucerHead:    "[green]>[reset]",
-			SaucerPadding: " ",
-			BarStart:      "[",
-			BarEnd:        "]",
-		}))
-		//bar = bar
-
-		// create subfolder per revision
-		pathPrefix := "output/" + timeString + "/" + serviceInfo["serviceName"] + "/"
-		err := os.MkdirAll(pathPrefix+"", 0755)
-		if err != nil {
-			log.Fatal(err)
-		}
-		bar.Add(10)
-
-		// create and apply YAML files
-		ns_err := os.WriteFile(pathPrefix+"ns.yaml", generateNamespaceSpec(out.Bytes()), 0755)
-		if ns_err != nil {
-			log.Fatal(ns_err)
-		}
-		if *modePtr != "yaml" {
-			kubectlApply(pathPrefix + "ns.yaml")
-		}
-		bar.Add(15)
-
-		sa_err := os.WriteFile(pathPrefix+"sa.yaml", generateServiceAccountSpec(out.Bytes()), 0755)
-		if sa_err != nil {
-			log.Fatal(sa_err)
-		}
-		if *modePtr != "yaml" {
-			kubectlApply(pathPrefix + "sa.yaml")
-		}
-		bar.Add(15)
-
-		deployment_err := os.WriteFile(pathPrefix+"deployment.yaml", generateDeploymentSpec(out.Bytes()), 0755)
-		if deployment_err != nil {
-			log.Fatal(deployment_err)
-		}
-		if *modePtr != "yaml" {
-			kubectlApply(pathPrefix + "deployment.yaml")
-		}
-		bar.Add(15)
-
-		service_err := os.WriteFile(pathPrefix+"service.yaml", generateServiceSpec(out.Bytes(), *serviceTypePtr, *servicePortPtr), 0755)
-		if service_err != nil {
-			log.Fatal(service_err)
-		}
-		if *modePtr != "yaml" {
-			kubectlApply(pathPrefix + "service.yaml")
-		}
-		bar.Add(15)
-
-		hpa_err := os.WriteFile(pathPrefix+"hpa.yaml", generateHorizontalPodAutoscalerSpec(out.Bytes(), *minReplicasPtr, *maxReplicasPtr), 0755)
-		if hpa_err != nil {
-			log.Fatal(hpa_err)
-		}
-		if *modePtr != "yaml" {
-			kubectlApply(pathPrefix + "hpa.yaml")
-		}
-		bar.Add(15)
-
-		route_err := os.WriteFile(pathPrefix+"route.yaml", generateHttpRouteSpec(out.Bytes(), *gwNamePtr, *gwNamespacePtr, 80), 0755)
-		if route_err != nil {
-			log.Fatal(route_err)
-		}
-		if *modePtr != "yaml" {
-			kubectlApply(pathPrefix + "route.yaml")
-		}
-		bar.Add(15)
-	}
-
-	if *modePtr != "yaml" {
-		fmt.Printf("\nResults:\n")
-		t.Render()
 	} else {
-		fmt.Printf("\nYAML dumped\n")
+		// create output table
+		t := table.NewWriter()
+		t.SetOutputMirror(os.Stdout)
+		t.AppendHeader(table.Row{"Service", "Revision", "Image", "CPU", "Memory", "Path"})
+
+		// create progress
+		//p := progress.NewWriter()
+		//p.SetOutputWriter(os.Stdout)
+
+		// cycle through revisions and process
+		for _, revision := range r.Revision {
+
+			// get revision info via gcloud
+			var out bytes.Buffer
+			cmd := exec.Command("gcloud", "run", "revisions", "describe", revision.RevisionId, "--region="+revision.Region, "--project="+revision.ProjectId, "--format=yaml")
+			cmd.Stdout = &out
+			cmd_err := cmd.Run()
+
+			if err != nil {
+				log.Fatal(cmd_err)
+			}
+
+			// get revision data
+			serviceInfo := getServiceInfo(out.Bytes())
+
+			// create table output
+			t.AppendRow([]interface{}{serviceInfo["serviceName"], serviceInfo["revisionId"], serviceInfo["image"], serviceInfo["cpu"], serviceInfo["memory"], "/" + serviceInfo["serviceName"]})
+			t.AppendSeparator()
+
+			// set up progress bar
+			fmt.Printf("\nProcessing revision %v of service %v\n", serviceInfo["revisionId"], serviceInfo["serviceName"])
+			bar := progressbar.NewOptions(100, progressbar.OptionSetWidth(50), progressbar.OptionEnableColorCodes(true), progressbar.OptionSetTheme(progressbar.Theme{
+				Saucer:        "[green]=[reset]",
+				SaucerHead:    "[green]>[reset]",
+				SaucerPadding: " ",
+				BarStart:      "[",
+				BarEnd:        "]",
+			}))
+			//bar = bar
+
+			// create subfolder per revision
+			pathPrefix := "output/" + timeString + "/" + serviceInfo["serviceName"] + "/"
+			err := os.MkdirAll(pathPrefix+"", 0755)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			bar.Add(10)
+
+			// create and apply YAML files
+			ns_err := os.WriteFile(pathPrefix+"ns.yaml", generateNamespaceSpec(out.Bytes()), 0755)
+			if ns_err != nil {
+				log.Fatal(ns_err)
+			}
+
+			kubectlApply(pathPrefix + "ns.yaml")
+			bar.Add(15)
+
+			sa_err := os.WriteFile(pathPrefix+"sa.yaml", generateServiceAccountSpec(out.Bytes()), 0755)
+			if sa_err != nil {
+				log.Fatal(sa_err)
+			}
+
+			kubectlApply(pathPrefix + "sa.yaml")
+			bar.Add(15)
+
+			deployment_err := os.WriteFile(pathPrefix+"deployment.yaml", generateDeploymentSpec(out.Bytes()), 0755)
+			if deployment_err != nil {
+				log.Fatal(deployment_err)
+			}
+
+			kubectlApply(pathPrefix + "deployment.yaml")
+			bar.Add(15)
+
+			service_err := os.WriteFile(pathPrefix+"service.yaml", generateServiceSpec(out.Bytes(), *serviceTypePtr, *servicePortPtr), 0755)
+			if service_err != nil {
+				log.Fatal(service_err)
+			}
+
+			kubectlApply(pathPrefix + "service.yaml")
+			bar.Add(15)
+
+			hpa_err := os.WriteFile(pathPrefix+"hpa.yaml", generateHorizontalPodAutoscalerSpec(out.Bytes(), *minReplicasPtr, *maxReplicasPtr), 0755)
+			if hpa_err != nil {
+				log.Fatal(hpa_err)
+			}
+
+			kubectlApply(pathPrefix + "hpa.yaml")
+			bar.Add(15)
+
+			route_err := os.WriteFile(pathPrefix+"route.yaml", generateHttpRouteSpec(out.Bytes(), *gwNamePtr, *gwNamespacePtr, 80), 0755)
+			if route_err != nil {
+				log.Fatal(route_err)
+			}
+
+			kubectlApply(pathPrefix + "route.yaml")
+			bar.Add(15)
+		}
+
+		fmt.Printf("\n\nResults:\n")
+		t.Render()
 	}
 
 }

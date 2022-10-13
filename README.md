@@ -1,6 +1,6 @@
 # kn2k8s
 
-command line tool for converting Cloud Run revisions to Kubernetes primitives and apply to the current kube context.
+command line tool for converting Cloud Run revisions to Kubernetes primitives and apply to the current kube context (default) or dump YAML to `stdout`.
 
 it will read a YAML file as input - example:
 
@@ -16,7 +16,7 @@ revisions:
 
 It'll create a namespace, deployment, service account, service account, HPA, HTTPRoute, etc based on the source revision info.
 
-This requires that the cluster has a gateway api controller installed.
+This requires that the cluster has a [gateway api controller](https://cloud.google.com/kubernetes-engine/docs/concepts/gateway-api) installed.
 
 >NOTE: because this tool uses the *service* name of a given revision, supplying multiple revisions from the same service will result in subsequent revisions overwriting previous ones
 
@@ -45,10 +45,26 @@ Then run, after populating your manifest file with your revision details (revisi
 go run . --manifestFile manifest.yaml
 ```
 
-> instead of applying output YAML to the cluster in kubectx, just generate the YAML via `--mode yaml`
+> instead of automatically applying the generated YAML to the cluster in kubectx, just generate the YAML via `--mode yaml`
 
 ```
 go run . --manifestFile manifest.yaml --mode yaml
+# reading manifest file manifest.yaml
+# dumping YAML to output/2022-10-12T231902-0500/
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hola
+---
+apiVersion: v1
+kind: ServiceAccount
+...
+```
+
+Of course, you can also just pipe the YAML to `kubectl`
+
+```
+go run . --mode yaml | kubectl apply -f -
 ```
 
 get help
