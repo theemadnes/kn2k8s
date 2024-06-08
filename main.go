@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -42,7 +41,7 @@ type Revisions struct {
 
 // function to read revision manifest from command line
 func readRevisions(filename string) (Revisions, error) {
-	buf, err := ioutil.ReadFile(filename)
+	buf, err := os.ReadFile(filename)
 	if err != nil {
 		log.Fatal(err)
 	}
