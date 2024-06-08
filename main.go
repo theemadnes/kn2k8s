@@ -260,7 +260,7 @@ func generateHorizontalPodAutoscalerSpec(stream []uint8, minReplicas int, maxRep
 	}
 
 	// define fields
-	hpa_1.APIVersion = "autoscaling/v2beta2"
+	hpa_1.APIVersion = "autoscaling/v2"
 	hpa_1.Kind = "HorizontalPodAutoscaler"
 	hpa_1.ObjectMeta.Name = rev.Labels["serving.knative.dev/service"]
 	hpa_1.ObjectMeta.Namespace = rev.Labels["serving.knative.dev/service"]
