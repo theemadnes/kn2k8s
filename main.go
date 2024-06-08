@@ -24,7 +24,7 @@ import (
 	"github.com/schollz/progressbar/v3"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gw "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gw "sigs.k8s.io/gateway-api/apis/v1"
 
 	//gw "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	Yml "sigs.k8s.io/yaml"
